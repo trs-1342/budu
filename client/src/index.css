@@ -1,4 +1,4 @@
-:root {
+/* :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
@@ -65,4 +65,18 @@ button:focus-visible {
   button {
     background-color: #f9f9f9;
   }
+} */
+
+@font-face {
+  font-family: "MassiraPen";
+  src: url("./fonts/29LT Massira Pen.otf") format("opentype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+html {
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+  font-family: "MassiraPen", system-ui, Arial, sans-serif;
 }

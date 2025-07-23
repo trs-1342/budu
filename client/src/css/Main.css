@@ -1,0 +1,104 @@
+/* Genel yerleşim */
+.main-container {
+  margin: 0 15vw;
+  /* padding: 1rem 0; */
+  display: flex;
+  gap: clamp(2rem, 4vw, 6rem); /* Ekran büyüklüğüne göre esnek boşluk */
+  align-items: center;
+  font-family: "MassiraPen" !important;
+}
+
+/* Sol taraf (fotoğraf + durum) */
+.left-section {
+  position: relative;
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.left-section img {
+  width: 100%;
+  max-width: 520px; /* Kontrolsüz büyümeyi engeller */
+  border-radius: 24px;
+  object-fit: cover;
+}
+
+.status-badge {
+  position: absolute;
+  bottom: 25px;
+  left: 113px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 22px;
+  background: #fff;
+  color: #16a34a; /* yeşil metin */
+  padding: 4px 12px 4px 8px;
+  border-radius: 9999px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.status-badge::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: currentColor; /* yeşil nokta */
+  box-shadow: 0 0 6px #16a34acc; /* hafif parıltı */
+}
+
+/* Sağ taraf (metin) */
+.right-section {
+    flex: 1;
+    direction: rtl;
+    text-align: right;
+}
+
+.title {
+  margin: 0 0 1rem 0;
+  font-size: 42px;
+}
+
+.subtitle {
+  margin: 0 0 2rem 0;
+  color: #555;
+  line-height: 1.6;
+  font-size: 22px;
+  max-width: 56ch; /* okuma genişliğini sınırlar */
+  /* font-family: "MassiraPen" !important; */
+}
+
+/* Butonlar */
+.btn-group {
+  display: flex;
+  gap: 1rem;
+}
+
+.btn {
+  padding: 0.75rem 2rem;
+  font-family: "MassiraPen" !important;
+  font-size: 30px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn-primary {
+  background: #222;
+  color: #fff;
+  border: none;
+}
+
+.btn-secondary {
+  background: #fff;
+  color: #222;
+  border: 1px solid #ddd;
+}

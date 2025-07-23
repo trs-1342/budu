@@ -1,0 +1,72 @@
+/* Header.css */
+.App-header {
+  /* Üstte biraz boşluk, soldan-sağdan uzak dur */
+  margin: 0px 15vw 0;
+}
+
+.App-header nav {
+  /* Izgara düzeni: sol buton – ortada menü – sağda logo */
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  column-gap: 2rem;
+}
+
+/* Sol taraftaki buton */
+#span-project-button {
+  justify-self: start; /* grid hücresinde sola yasla */
+}
+
+#project-button {
+  background: #000;
+  color: #fff;
+  padding: 1rem 1.2rem;
+  border: none;
+  border-radius: 10px;
+  font-size: 18px;
+  font-family: "MassiraPen";
+  cursor: pointer;
+  transition: background 0.25s;
+}
+
+#project-button:hover {
+  background: #222;
+}
+
+/* Ortadaki menü */
+nav ul {
+  list-style: none;
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+  padding: 0;
+  font-size: 25px;
+}
+
+nav ul li a {
+  text-decoration: none;
+  color: #111;
+  transition: color 0.2s;
+}
+
+nav ul li a:hover {
+  color: #555;
+}
+
+/* Sağdaki logo */
+#budu-logo {
+  width: 200px; /* küçücük logo */
+  height: auto;
+  object-fit: contain;
+  justify-self: end; /* ızgara hücresinde sağa yasla */
+}
+
+/* Küçük ekranlar için basit ayar */
+@media (max-width: 600px) {
+  nav ul {
+    gap: 1rem;
+  }
+  #project-button {
+    padding: 0.45rem 1rem;
+  }
+}
