@@ -1,7 +1,6 @@
-import React from "react";
+// import React from "react";
 import "../css/Projects.css";
 
-// Demo görseller (kendi görsellerinle değiştir)
 import proj1 from "../assets/image1.png";
 import proj2 from "../assets/image2.png";
 
@@ -14,22 +13,38 @@ type Project = {
 };
 
 const projects: Project[] = [
-    {
-        id: "design-course",
-        title: "دورة التصميم الإبداعي",
-        description:
-            "تعلم أساسيات التصميم الجرافيكي وكيفية تحويل الأفكار إلى تصاميم بصرية احترافية باستخدام أحدث الأدوات والمنهجيات.",
-        image: proj1,
-        href: "/projects/design-course",
-    },
-    {
-        id: "video-editing-course",
-        title: "دورة تحرير الفيديو",
-        description:
-            "اكتشف تقنيات المونتاج المتقدمة وطرق إنتاج فيديوهات جذابة واحترافية تناسب جميع المنصات الرقمية.",
-        image: proj2,
-        href: "/projects/video-editing-course",
-    },
+  {
+    id: "design-course",
+    title: "دورة التصميم الإبداعي",
+    description:
+      "تعلم أساسيات التصميم الجرافيكي وكيفية تحويل الأفكار إلى تصاميم بصرية احترافية باستخدام أحدث الأدوات والمنهجيات.",
+    image: proj1,
+    href: "/projects/design-course",
+  },
+  {
+    id: "video-editing-course",
+    title: "دورة تحرير الفيديو",
+    description:
+      "اكتشف تقنيات المونتاج المتقدمة وطرق إنتاج فيديوهات جذابة واحترافية تناسب جميع المنصات الرقمية.",
+    image: proj2,
+    href: "/projects/video-editing-course",
+  },
+  {
+    id: "design-course",
+    title: "دورة التصميم الإبداعي",
+    description:
+      "تعلم أساسيات التصميم الجرافيكي وكيفية تحويل الأفكار إلى تصاميم بصرية احترافية باستخدام أحدث الأدوات والمنهجيات.",
+    image: proj1,
+    href: "/projects/design-course",
+  },
+  {
+    id: "video-editing-course",
+    title: "دورة تحرير الفيديو",
+    description:
+      "اكتشف تقنيات المونتاج المتقدمة وطرق إنتاج فيديوهات جذابة واحترافية تناسب جميع المنصات الرقمية.",
+    image: proj2,
+    href: "/projects/video-editing-course",
+  }
 ];
 
 function Projects() {
@@ -48,7 +63,8 @@ function Projects() {
           دوراتي
         </h1>
         <p className="projects-subtitle">
-          مزيج من التفكير المبتكر والحلول العملية في استراتيجيات الدورات التدريبية
+          مزيج من التفكير المبتكر والحلول العملية في استراتيجيات الدورات
+          التدريبية
         </p>
       </header>
 

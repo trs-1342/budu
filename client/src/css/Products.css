@@ -1,0 +1,144 @@
+/* Bölüm iskeleti */
+.products-section {
+  margin: 4rem 15vw 6rem;
+  font-family: "MassiraPen", ui-sans-serif, system-ui;
+}
+
+/* Üstteki buton */
+.products-topbar {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 1rem;
+}
+.products-all-btn {
+  background: #111;
+  color: #fff;
+  text-decoration: none;
+  font-size: 16px;
+  padding: 0.7rem 1rem;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  transition: transform 0.15s ease, background 0.2s ease;
+}
+.products-all-btn:hover {
+  background: #222;
+  transform: translateY(-1px);
+}
+
+/* Başlık alanı */
+.products-header {
+  text-align: center;
+  margin-bottom: 2.2rem;
+}
+.products-title {
+  margin: 0 0 0.5rem;
+  font-size: clamp(28px, 4vw, 56px);
+  line-height: 1.1;
+  color: #111;
+}
+.products-subtitle {
+  margin: 0;
+  color: #5b5b5b;
+  font-size: clamp(14px, 1.8vw, 18px);
+}
+
+/* Grid */
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: clamp(1.2rem, 2.5vw, 2rem);
+}
+
+/* Kart */
+.product-card {
+  background: #f3efe9; /* screenshot'taki sıcak gri/bej vibe */
+  border-radius: 22px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+.product-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.09);
+}
+
+/* Görsel kapsayıcı */
+.product-media {
+  display: block;
+  padding: clamp(10px, 1.4vw, 16px);
+}
+.product-media img {
+  width: 100%;
+  height: clamp(220px, 30vw, 340px);
+  object-fit: cover;
+  display: block;
+  background: #ececea;
+  border-radius: 18px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* İçerik */
+.product-content {
+  padding: clamp(1rem, 2.2vw, 1.5rem);
+}
+
+.product-name {
+  margin: 0 0 0.6rem;
+  font-size: clamp(21px, 2.6vw, 30px);
+  line-height: 1.25;
+  color: #111;
+}
+.product-name-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+.product-name-link:hover {
+  opacity: 0.9;
+}
+
+.product-desc {
+  margin: 0 0 1.1rem;
+  color: #555;
+  font-size: clamp(14px, 1.8vw, 17px);
+  line-height: 1.65;
+}
+
+/* Alt aksiyon */
+.product-actions {
+  display: flex;
+  align-items: center;
+}
+.product-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #111;
+  text-decoration: none;
+  font-weight: 600;
+  padding: 0.4rem 0.6rem;
+  border-radius: 10px;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.product-link:hover {
+  background: #eaeaea;
+  transform: translateX(2px);
+}
+.product-link-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .products-grid {
+    grid-template-columns: 1fr;
+  }
+  .products-section {
+    margin: 3rem 8vw 5rem;
+  }
+}
