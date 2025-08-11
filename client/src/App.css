@@ -3,3 +3,120 @@
   padding: 0;
   box-sizing: border-box;
 }
+
+/* ==== Responsive Base (import et) ==== */
+:root {
+  --container: min(1200px, 92vw);
+  --radius-xl: 22px;
+  --shadow-soft: 0 10px 26px rgba(0, 0, 0, 0.09);
+
+  /* fluid type */
+  --fs-h1: clamp(28px, 4vw, 56px);
+  --fs-h2: clamp(22px, 3vw, 40px);
+  --fs-body: clamp(14px, 1.8vw, 18px);
+}
+
+/* reset + utilities */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+img,
+video {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+.container {
+  width: var(--container);
+  margin: 0 auto;
+}
+.round-xl {
+  border-radius: var(--radius-xl);
+}
+.shadow-soft {
+  box-shadow: var(--shadow-soft);
+}
+
+/* fluid headings */
+h1 {
+  font-size: var(--fs-h1);
+  line-height: 1.1;
+}
+h2 {
+  font-size: var(--fs-h2);
+  line-height: 1.15;
+}
+body {
+  font-size: var(--fs-body);
+}
+
+/* grids shortcut */
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: clamp(1rem, 2.5vw, 2rem);
+}
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(1rem, 2.5vw, 2rem);
+}
+
+/* touch & motion */
+@media (hover: hover) {
+  .btn:hover {
+    transform: translateY(-1px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* breakpoints */
+@media (max-width: 1280px) {
+  .container {
+    width: min(1100px, 94vw);
+  }
+}
+@media (max-width: 1024px) {
+  .grid-2,
+  .grid-3 {
+    grid-template-columns: 1fr;
+  }
+  .section {
+    margin: 3rem 6vw;
+  }
+}
+@media (max-width: 768px) {
+  .stack-sm {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .card-media {
+    height: 48vw;
+  } /* görsel yüksekliği fluid */
+}
+@media (max-width: 480px) {
+  .section {
+    margin: 2.2rem 4vw;
+  }
+  .btn {
+    padding: 0.85rem 1rem;
+    border-radius: 10px;
+  }
+  .title-lg {
+    letter-spacing: 0.1px;
+  }
+}
