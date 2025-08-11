@@ -49,9 +49,9 @@
 
 /* Sağ taraf (metin) */
 .right-section {
-    flex: 1;
-    direction: rtl;
-    text-align: right;
+  flex: 1;
+  direction: rtl;
+  text-align: right;
 }
 
 .title {
@@ -101,4 +101,91 @@
   background: #fff;
   color: #222;
   border: 1px solid #ddd;
+}
+
+.image-marquee {
+  margin: 0 15vw;
+  overflow: hidden;
+  position: relative;
+  height: max-content;
+  margin-top: 6rem;
+  background: #fff;
+  pointer-events: none;
+}
+
+.marquee-track {
+  display: flex;
+  gap: 2rem;
+  animation: marquee 20s linear infinite;
+  width: max-content;
+}
+
+/* Görseller */
+.marquee-track img {
+  height: 200px;
+  width: auto;
+  object-fit: cover;
+  flex-shrink: 0;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* Kenarlara bulanıklık efekti */
+.image-marquee::before,
+.image-marquee::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 90px; /* bulanık kenar genişliği */
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.image-marquee::before {
+  left: 0;
+  background: linear-gradient(to right, #fff 0%, transparent 100%);
+  filter: blur(1px); /* hafif bulanık */
+}
+
+.image-marquee::after {
+  right: 0;
+  background: linear-gradient(to left, #fff 0%, transparent 100%);
+  filter: blur(1px);
+}
+
+/* Kayan animasyon */
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+/* ! istatistik bölümü */
+
+.stats-section {
+  margin: 8rem 15vw;
+  display: flex;
+  justify-content: space-between;
+  text-align: center;
+  padding: 1.5rem 0;
+}
+
+.stat-item {
+  flex: 1;
+}
+
+.stat-label {
+  font-size: 20px;
+  color: #555;
+  margin-bottom: 0.5rem;
+}
+
+.stat-value {
+  font-size: 32px;
+  font-weight: bold;
+  color: #111;
 }
