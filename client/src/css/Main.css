@@ -1,9 +1,10 @@
-/* Genel yerleşim */
+/* ===== Main.css — Desktop aynı kalsın, Mobilde fotoğraf üstte ===== */
+
+/* Genel yerleşim (DESKTOP/TABLET) */
 .main-container {
   margin: 0 15vw;
-  /* padding: 1rem 0; */
-  display: flex;
-  gap: clamp(2rem, 4vw, 6rem); /* Ekran büyüklüğüne göre esnek boşluk */
+  display: flex; /* desktopta yan yana */
+  gap: clamp(2rem, 4vw, 6rem);
   align-items: center;
   font-family: "MassiraPen" !important;
 }
@@ -16,35 +17,35 @@
   justify-content: center;
 }
 
+/* Desktop: görsel eskisi gibi, 520px sınırı korunur */
 .left-section img {
   width: 100%;
-  max-width: 520px; /* Kontrolsüz büyümeyi engeller */
+  max-width: 520px;
   border-radius: 24px;
   object-fit: cover;
 }
 
 .status-badge {
   position: absolute;
-  bottom: 25px;
-  left: 113px;
+  bottom: 0px;
+  left: 30px;
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 22px;
   background: #fff;
-  color: #16a34a; /* yeşil metin */
+  color: #16a34a;
   padding: 4px 12px 4px 8px;
   border-radius: 9999px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
-
 .status-badge::before {
   content: "";
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: currentColor; /* yeşil nokta */
-  box-shadow: 0 0 6px #16a34acc; /* hafif parıltı */
+  background: currentColor;
+  box-shadow: 0 0 6px #16a34a;
 }
 
 /* Sağ taraf (metin) */
@@ -58,14 +59,12 @@
   margin: 0 0 1rem 0;
   font-size: 42px;
 }
-
 .subtitle {
   margin: 0 0 2rem 0;
   color: #555;
   line-height: 1.6;
   font-size: 22px;
-  max-width: 56ch; /* okuma genişliğini sınırlar */
-  /* font-family: "MassiraPen" !important; */
+  max-width: 56ch;
 }
 
 /* Butonlar */
@@ -73,7 +72,6 @@
   display: flex;
   gap: 1rem;
 }
-
 .btn {
   padding: 0.75rem 2rem;
   font-family: "MassiraPen" !important;
@@ -82,27 +80,24 @@
   cursor: pointer;
   transition: transform 0.2s ease;
 }
-
 .btn:hover {
   transform: translateY(-2px);
 }
-
 .btn:active {
   transform: translateY(0);
 }
-
 .btn-primary {
   background: #222;
   color: #fff;
   border: none;
 }
-
 .btn-secondary {
   background: #fff;
   color: #222;
   border: 1px solid #ddd;
 }
 
+/* ===== Kayan görseller ===== */
 .image-marquee {
   margin: 0 15vw;
   overflow: hidden;
@@ -110,51 +105,43 @@
   height: max-content;
   margin-top: 6rem;
   background: #fff;
-  pointer-events: none;
+  pointer-events: auto;
 }
-
 .marquee-track {
   display: flex;
   gap: 2rem;
   animation: marquee 20s linear infinite;
   width: max-content;
 }
-
-/* Görseller */
 .marquee-track img {
   height: 200px;
   width: auto;
   object-fit: cover;
   flex-shrink: 0;
   user-select: none;
-  pointer-events: none;
+  pointer-events: auto;
+  border-radius: 20px;
 }
-
-/* Kenarlara bulanıklık efekti */
 .image-marquee::before,
 .image-marquee::after {
   content: "";
   position: absolute;
   top: 0;
-  width: 90px; /* bulanık kenar genişliği */
+  width: 90px;
   height: 100%;
   z-index: 2;
-  pointer-events: none;
+  pointer-events: auto;
 }
-
 .image-marquee::before {
   left: 0;
   background: linear-gradient(to right, #fff 0%, transparent 100%);
-  filter: blur(1px); /* hafif bulanık */
+  filter: blur(1px);
 }
-
 .image-marquee::after {
   right: 0;
   background: linear-gradient(to left, #fff 0%, transparent 100%);
   filter: blur(1px);
 }
-
-/* Kayan animasyon */
 @keyframes marquee {
   0% {
     transform: translateX(0);
@@ -164,28 +151,148 @@
   }
 }
 
-/* ! istatistik bölümü */
-
+/* ===== İstatistik bölümü ===== */
 .stats-section {
   margin: 8rem 15vw;
   display: flex;
   justify-content: space-between;
   text-align: center;
   padding: 1.5rem 0;
+  gap: 1.5rem;
 }
-
 .stat-item {
   flex: 1;
 }
-
 .stat-label {
   font-size: 20px;
   color: #555;
   margin-bottom: 0.5rem;
 }
-
 .stat-value {
   font-size: 32px;
   font-weight: bold;
   color: #111;
+}
+
+/* ====== MOBİL (≤1024px) — Fotoğraf ÜSTTE, rozet SOL-ALTA ====== */
+/* ====== Mobil/tablet (≤1024px) ====== */
+@media (max-width: 1024px) {
+  .main-container {
+    margin: 0 8vw;
+    flex-direction: column; /* mobilde dikey */
+    align-items: stretch;
+    gap: clamp(1.2rem, 3.6vw, 2rem);
+  }
+
+  .left-section {
+    order: 1;
+  }
+  .right-section {
+    order: 2;
+    margin-top: clamp(1rem, 3vw, 2rem);
+  }
+
+  /* Mobilde görsel tam genişlik */
+  .left-section img {
+    max-width: 100%;
+    max-height: min(68vh, 640px);
+  }
+
+  /* Rozet sol-alt ve duyarlı boyut */
+  .status-badge {
+    bottom: 16px;
+    left: 16px;
+    font-size: clamp(12px, 3.6vw, 18px);
+    padding: 5px 10px 5px 9px;
+  }
+  .status-badge::before {
+    width: 0.6em;
+    height: 0.6em;
+  }
+
+  .title {
+    font-size: clamp(28px, 6vw, 38px);
+  }
+  .subtitle {
+    font-size: clamp(15px, 4vw, 18px);
+    max-width: 60ch;
+  }
+  .btn {
+    font-size: clamp(18px, 4.8vw, 24px);
+    padding: 0.7rem 1.2rem;
+  }
+  .btn-group {
+    flex-wrap: wrap;
+  }
+
+  /* ====== Marquee (kayan küçük görseller) — mobil/tablet ayarı ====== */
+  .image-marquee {
+    margin: 0 8vw;
+    margin-top: 4rem;
+  }
+  .marquee-track {
+    gap: clamp(0.5rem, 2.5vw, 1.2rem);
+    animation-duration: 26s; /* biraz yavaşlat */
+  }
+  .marquee-track img {
+    height: clamp(120px, 28vw, 180px); /* mobilde daha büyük, akışkan */
+    border-radius: 14px;
+  }
+  .image-marquee::before,
+  .image-marquee::after {
+    width: 48px; /* kenar blur overlay daralt */
+    filter: blur(0.8px);
+  }
+
+  /* ====== İstatistik bölümü ====== */
+  .stats-section {
+    margin: 6rem 8vw;
+    flex-direction: column;
+  }
+}
+
+/* ====== Küçük mobil (≤640px) ekstra dokunuş ====== */
+@media (max-width: 640px) {
+  .main-container {
+    margin: 0 5vw;
+  }
+
+  /* Foto üstte biraz nefes */
+  .left-section img {
+    margin-top: 20px;
+    max-height: min(60vh, 560px);
+  }
+
+  /* Marquee dar ekranda daha sakin */
+  .image-marquee {
+    margin: 0 5vw;
+    margin-top: 3rem;
+  }
+  .marquee-track {
+    animation-duration: 30s; /* biraz daha yavaş */
+    gap: clamp(0.4rem, 3vw, 0.9rem);
+  }
+  .marquee-track img {
+    height: clamp(100px, 34vw, 150px);
+    border-radius: 12px;
+  }
+  .image-marquee::before,
+  .image-marquee::after {
+    width: 32px;
+  }
+
+  .stats-section {
+    margin: 4rem 5vw;
+  }
+}
+
+/* --- Marquee pause-on-hover fix (En alta ekle) --- */
+.image-marquee:hover .marquee-track,
+.image-marquee:focus-within .marquee-track,
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
+.marquee-track {
+  animation-play-state: running;
 }

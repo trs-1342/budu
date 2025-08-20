@@ -1,4 +1,3 @@
-// import React from "react";
 import "../css/Projects.css";
 
 import proj1 from "../assets/image1.png";
@@ -14,50 +13,48 @@ type Project = {
 
 const projects: Project[] = [
   {
-    id: "design-course",
+    id: "design-projects-1",
     title: "دورة التصميم الإبداعي",
     description:
       "تعلم أساسيات التصميم الجرافيكي وكيفية تحويل الأفكار إلى تصاميم بصرية احترافية باستخدام أحدث الأدوات والمنهجيات.",
     image: proj1,
-    href: "/projects/design-course",
+    href: "/projects/design-projects",
   },
   {
-    id: "video-editing-course",
+    id: "video-editing-projects-1",
     title: "دورة تحرير الفيديو",
     description:
       "اكتشف تقنيات المونتاج المتقدمة وطرق إنتاج فيديوهات جذابة واحترافية تناسب جميع المنصات الرقمية.",
     image: proj2,
-    href: "/projects/video-editing-course",
+    href: "/projects/video-editing-projects",
   },
   {
-    id: "design-course",
+    id: "design-projects-2",
     title: "دورة التصميم الإبداعي",
     description:
       "تعلم أساسيات التصميم الجرافيكي وكيفية تحويل الأفكار إلى تصاميم بصرية احترافية باستخدام أحدث الأدوات والمنهجيات.",
     image: proj1,
-    href: "/projects/design-course",
+    href: "/projects/design-projects",
   },
   {
-    id: "video-editing-course",
+    id: "video-editing-projects-2",
     title: "دورة تحرير الفيديو",
     description:
       "اكتشف تقنيات المونتاج المتقدمة وطرق إنتاج فيديوهات جذابة واحترافية تناسب جميع المنصات الرقمية.",
     image: proj2,
-    href: "/projects/video-editing-course",
-  }
+    href: "/projects/video-editing-projects",
+  },
 ];
 
 function Projects() {
   return (
     <section className="projects-section" aria-labelledby="projects-heading">
-      {/* üst şerit */}
       <div className="projects-topbar">
-        <a className="projects-all-btn" href="/projects">
+        <a className="projects-all-btn" href="/courses">
           تصفح جميع دوراتي
         </a>
       </div>
 
-      {/* başlık + alt metin */}
       <header className="projects-header">
         <h1 id="projects-heading" className="projects-title">
           دوراتي
@@ -68,14 +65,26 @@ function Projects() {
         </p>
       </header>
 
-      {/* kart grid */}
-      <div className="projects-grid">
-        {projects.map((p) => (
-          <article className="project-card" key={p.id}>
+      <div
+        className="projects-grid"
+        data-reveal-group
+        style={{ "--reveal-stagger": "90ms" } as React.CSSProperties}
+      >
+        {projects.map((p, i) => (
+          <article
+            className={`project-card reveal ${
+              i % 3 === 0
+                ? "reveal--left"
+                : i % 3 === 1
+                ? "reveal--right"
+                : "reveal--up"
+            }`}
+            key={p.id}
+          >
+            {" "}
             <a href={p.href} className="project-media" aria-label={p.title}>
               <img src={p.image} alt={p.title} loading="lazy" />
             </a>
-
             <div className="project-content">
               <h3 className="project-name">{p.title}</h3>
               <p className="project-desc">{p.description}</p>

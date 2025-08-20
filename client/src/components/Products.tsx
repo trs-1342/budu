@@ -35,7 +35,7 @@ export default function Products() {
     <section className="products-section" aria-labelledby="products-heading">
       {/* Sol üst buton */}
       <div className="products-topbar">
-        <a className="products-all-btn" href="/products">
+        <a className="products-all-btn" href="/my-products">
           تصفح جميع منتجاتي
         </a>
       </div>
@@ -51,9 +51,13 @@ export default function Products() {
       </header>
 
       {/* Kart grid */}
-      <div className="products-grid">
+      <div
+        className="products-grid"
+        data-reveal-group
+        style={{ "--reveal-stagger": "90ms" } as React.CSSProperties}
+      >
         {products.map((p) => (
-          <article className="product-card" key={p.id}>
+          <article className="product-card reveal reveal--up" key={p.id}>
             <a href={p.href} className="product-media" aria-label={p.title}>
               <img src={p.image} alt={p.title} loading="lazy" />
             </a>

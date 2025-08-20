@@ -10,13 +10,24 @@ function Main() {
     <>
       <main className="main-container">
         {/* SOL TARAF – Fotoğraf + durum rozeti */}
-        <section className="left-section">
-          <img src={buduPhoto} alt="Profil fotoğrafı" />
-          <span className="status-badge">نشط بالعمل</span>
+        <section
+          className="left-section reveal reveal--fade"
+          data-reveal-group
+          style={{ "--reveal-stagger": "120ms" } as React.CSSProperties}
+        >
+          <img
+            src={buduPhoto}
+            alt="Profil fotoğrafı"
+            className="reveal reveal--left"
+            /* istersen sadece bu görsele özel hız/mesafe:
+       style={{ "--reveal-distance":"28px", "--reveal-duration":".6s" } as React.CSSProperties}
+    */
+          />
+          <span className="status-badge reveal reveal--up">نشط بالعمل</span>
         </section>
 
         {/* SAĞ TARAF – Başlık, metin, butonlar */}
-        <section className="right-section">
+        <section className="right-section reveal reveal--right">
           <h2 className="title">بشرى دخان</h2>
           <p className="subtitle">
             مصممة ومصورة محترفة، أُدير حسابات التواصل الاجتماعي وأدير الحملات
@@ -30,7 +41,7 @@ function Main() {
         </section>
       </main>
 
-      <section className="image-marquee">
+      <section className="image-marquee reveal reveal--fade">
         <div className="marquee-track">
           <img src={src1} alt="img1" />
           <img src={src2} alt="img2" />
@@ -51,21 +62,25 @@ function Main() {
         </div>
       </section>
 
-      <section className="stats-section">
+      <section
+        className="stats-section"
+        data-reveal-group
+        style={{ "--reveal-stagger": "90ms" } as React.CSSProperties}
+      >
         <div className="stat-item">
-          <p className="stat-label">Tasarlanmış Alanlar</p>
+          <p className="stat-label">المجالات المصممة</p>
           <p className="stat-value">42</p>
         </div>
         <div className="stat-item">
-          <p className="stat-label">Müşteri Memnuniyeti</p>
+          <p className="stat-label">رضا العملاء</p>
           <p className="stat-value">100%</p>
         </div>
         <div className="stat-item">
-          <p className="stat-label">Tamamlanan Projeler</p>
+          <p className="stat-label">المشاريع المنجزة</p>
           <p className="stat-value">142</p>
         </div>
         <div className="stat-item">
-          <p className="stat-label">Deneyim Sürem</p>
+          <p className="stat-label">سنوات الخبرة</p>
           <p className="stat-value">15</p>
         </div>
       </section>

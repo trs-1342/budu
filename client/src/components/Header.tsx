@@ -1,9 +1,9 @@
 import "../css/Header.css";
-import buduLogo from "../assets/buduLogo.svg";
+import buduLogo from "../assets/arbudu.svg";
 
 function Header() {
   return (
-    <header className="App-header">
+    <header className="App-header reveal reveal--center">
       <div>
         <nav>
           <span id="span-project-button">
@@ -11,7 +11,10 @@ function Header() {
           </span>
           <ul>
             <li>
-              <a href="/products">المنتجات</a>
+              <a href="/my-products">منتجاتي</a>
+            </li>
+            <li>
+              <a href="/courses">الدورات</a>
             </li>
             <li>
               <a href="/my-projects">مشاريعي</a>
@@ -24,7 +27,9 @@ function Header() {
             </li>
           </ul>
           <span id="span-budu-logo">
-            <img src={buduLogo} id="budu-logo" alt="Budu logo" />
+            <a href="/">
+              <img src={buduLogo} id="budu-logo" alt="Budu logo" />
+            </a>
           </span>
         </nav>
       </div>
