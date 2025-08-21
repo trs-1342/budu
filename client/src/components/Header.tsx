@@ -1,5 +1,5 @@
 import "../css/Header.css";
-import buduLogo from "../assets/arbudu.svg";
+import buduLogo from "../assets/buduLogo.svg";
 
 function Header() {
   return (

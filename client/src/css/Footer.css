@@ -40,6 +40,17 @@
   border-radius: 10px;
   outline: none;
 }
+
+.message-input {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: #2a2b2d;
+  color: #eaeaea;
+  padding: 0.9rem 1rem;
+  border-radius: 10px;
+  outline: none;
+}
+
 .subscribe-input::placeholder {
   color: #9aa0a6;
 }

@@ -32,9 +32,16 @@ export default function Footer() {
               placeholder="email"
               aria-label="email"
             />
+            <input
+              className="message-input"
+              type="text"
+              name="message"
+              placeholder="text message..."
+              aria-label="message"
+            />
 
             <button className="subscribe-btn" type="submit">
-              اشترك الآن
+              أرسل
             </button>
           </form>
         </div>
