@@ -2,7 +2,7 @@ import type { FormEvent } from "react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./admin.css";
-import { getTempAdmin, isGateOpen, LS_KEYS, sha256 } from "./state";
+import { isGateOpen } from "./state";
 
 export default function AdminLogin() {
   const [show, setShow] = useState(false);
@@ -10,9 +10,12 @@ export default function AdminLogin() {
   const [msg, setMsg] = useState("");
   const nav = useNavigate();
 
+  const API_URL =
+    import.meta.env.VITE_SERVER_API_URL || "http://localhost:1002";
+
   useEffect(() => {
     if (!isGateOpen()) nav("/admin/gate", { replace: true });
-    if (!getTempAdmin()) nav("/admin/setup", { replace: true });
+    // getTempAdmin() kontrolü kaldırıldı — DB tabanlı kayıt kullanıyoruz
   }, [nav]);
 
   async function handleSubmit(e: FormEvent) {
@@ -23,21 +26,23 @@ export default function AdminLogin() {
     const username = String(fd.get("username") || "").trim();
     const password = String(fd.get("password") || "").trim();
 
-    const tmp = getTempAdmin();
-    if (!tmp) {
-      setMsg("Geçici hesap yok. Setup adımına dön.");
-      setLoading(false);
-      return;
-    }
-    const passHash = await sha256(password);
-    if (username === tmp.username && passHash === tmp.passHash) {
-      localStorage.setItem(LS_KEYS.ADMIN_TOKEN, "temp-session");
+    try {
+      const r = await fetch(`${API_URL}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || "Giriş başarısız");
+
+      localStorage.setItem("budu.jwt", data.token); // gerçek JWT
       setMsg("Giriş başarılı. Panele yönlendiriliyor…");
-      setTimeout(() => nav("/admin", { replace: true }), 400);
-    } else {
-      setMsg("Hatalı kullanıcı adı veya şifre.");
+      setTimeout(() => nav("/admin", { replace: true }), 300);
+    } catch (err: any) {
+      setMsg(err.message || "Hata");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   return (

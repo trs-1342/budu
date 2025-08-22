@@ -10,11 +10,14 @@ CREATE TABLE users (
 
 CREATE TABLE email_messages (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT,
+    username TEXT DEFAULT('anonim'),
+    email TEXT NOT NULL,
     message TEXT NOT NULL,
-    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+SELECT * FROM budu.email_messages;
+SELECT * FROM budu.users;
 
+DROP TABLE email_messages;
 DROP DATABASE BUDU;

@@ -1,6 +1,6 @@
 import { Link, Outlet, Routes, Route, Navigate } from "react-router-dom";
 import "./admin.css";
-import { LS_KEYS } from "./state";
+// import { LS_KEYS } from "./state";
 
 function Dashboard() {
   return (
@@ -21,7 +21,7 @@ export default function AdminLayout() {
           <button
             className="admin-logout"
             onClick={() => {
-              localStorage.removeItem(LS_KEYS.ADMIN_TOKEN);
+              localStorage.removeItem("budu.jwt"); // <-- düzeltildi
               window.location.href = "/admin/login";
             }}
           >
