@@ -1,32 +1,29 @@
-import buduPhoto from "../assets/buduPhoto.png";
+import defaultPhoto from "../assets/buduPhoto.png";
 import src1 from "../assets/image1.png";
 import src2 from "../assets/image2.png";
 import src3 from "../assets/image3.png";
 import src4 from "../assets/image4.png";
 import "../css/Main.css";
+import { getSite } from "../admin/store";
 
 function Main() {
+  const site = getSite();
+  const hero = site.heroPhotoDataUrl || defaultPhoto;
   return (
     <>
       <main className="main-container">
-        {/* SOL TARAF – Fotoğraf + durum rozeti */}
         <section
           className="left-section reveal reveal--fade"
           data-reveal-group
           style={{ "--reveal-stagger": "120ms" } as React.CSSProperties}
         >
           <img
-            src={buduPhoto}
+            src={hero}
             alt="Profil fotoğrafı"
             className="reveal reveal--left"
-            /* istersen sadece bu görsele özel hız/mesafe:
-       style={{ "--reveal-distance":"28px", "--reveal-duration":".6s" } as React.CSSProperties}
-    */
           />
           <span className="status-badge reveal reveal--up">نشط بالعمل</span>
         </section>
-
-        {/* SAĞ TARAF – Başlık, metin, butonlar */}
         <section className="right-section reveal reveal--right">
           <h2 className="title">بشرى دخان</h2>
           <p className="subtitle">

@@ -1,7 +1,11 @@
 import "../css/Header.css";
-import buduLogo from "../assets/buduLogo.svg";
+import defaultLogo from "../assets/buduLogo.svg";
+import { getSite } from "../admin/store";
 
 function Header() {
+  const site = getSite();
+  const logo = site.logoDataUrl || defaultLogo;
+  const name = site.siteName || "Budu";
   return (
     <header className="App-header reveal reveal--center">
       <div>
@@ -26,9 +30,9 @@ function Header() {
               <a href="/">الصفحة الرئيسية</a>
             </li>
           </ul>
-          <span id="span-budu-logo">
+          <span id="span-budu-logo" title={name}>
             <a href="/">
-              <img src={buduLogo} id="budu-logo" alt="Budu logo" />
+              <img src={logo} id="budu-logo" alt={name} />
             </a>
           </span>
         </nav>
