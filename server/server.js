@@ -18,7 +18,7 @@ const {
   DB_USER = "root",
   DB_PASS = "password",
   DB_NAME = "BUDU",
-  CLIENT_ORIGIN = "http://localhost:1001", // react dev server (vite)
+  CLIENT_ORIGIN = "http://192.168.1.120:1001", // react dev server (vite)
 } = process.env;
 
 app.use(helmet());
@@ -225,9 +225,9 @@ app.get("/api/admin/ping", auth, (req, res) => {
 
 app.get("/", (req, res) => {
   console.log("Health check request received");
-  res.send("server is running, go to <a href='http://localhost:1001'>client</a>");
+  res.send("server is running, go to <a href='http://192.168.1.120:1001'>client</a>");
 });
 
 app.listen(PORT, () => {
-  console.log(`API listening on http://localhost:${PORT}`);
+  console.log(`API listening on http://192.168.1.120:${PORT}`);
 });

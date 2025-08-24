@@ -13,7 +13,7 @@ export default function Footer() {
     const email = String(fd.get("email") || "");
     const message = String(fd.get("message") || "");
 
-    // const API_URL = import.meta.env.VITE_SERVER_API_URL || "http://localhost:1002";
+    // const API_URL = import.meta.env.VITE_SERVER_API_URL || "http://192.168.1.120:1002";
 
     if (!message.trim()) {
       alert("Lütfen bir mesaj yazın.");
@@ -21,7 +21,7 @@ export default function Footer() {
     }
 
     try {
-      const res = await fetch(`http://localhost:1002/api/public/email`, {
+      const res = await fetch(`http://192.168.1.120:1002/api/public/email`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, message }),

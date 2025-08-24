@@ -1,17 +1,26 @@
-import React, { useContext } from "react";
+// src/components/Main.tsx
 import defaultPhoto from "../assets/buduPhoto.png";
 import src1 from "../assets/image1.png";
 import src2 from "../assets/image2.png";
 import src3 from "../assets/image3.png";
 import src4 from "../assets/image4.png";
 import "../css/Main.css";
-import { getSite } from "../admin/store";
-import { SiteNameContext } from "../main";
+import { useEffect, useState } from "react";
+import { PublicAPI } from "../lib/api";
 
 function Main() {
-  const site = getSite();
-  const hero = site.heroPhotoDataUrl || defaultPhoto;
-  const siteName = useContext(SiteNameContext);
+  const [homePhoto, setHomePhoto] = useState<string | null>(null);
+
+  useEffect(() => {
+    PublicAPI.settings().then((s) => setHomePhoto(s?.home_photo_url || null));
+    const h = (e: any) => {
+      if (e.detail?.home_photo_url) setHomePhoto(e.detail.home_photo_url);
+    };
+    window.addEventListener("budu-settings-updated", h);
+    return () => window.removeEventListener("budu-settings-updated", h);
+  }, []);
+
+  const photo = homePhoto || defaultPhoto;
   return (
     <>
       <main className="main-container">
@@ -21,7 +30,7 @@ function Main() {
           style={{ "--reveal-stagger": "120ms" } as React.CSSProperties}
         >
           <img
-            src={hero}
+            src={photo}
             alt="Profil fotoğrafı"
             className="reveal reveal--left"
           />

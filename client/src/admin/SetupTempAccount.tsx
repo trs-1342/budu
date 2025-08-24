@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import "./admin.css";
 import { isGateOpen } from "./state";
 
-const API_URL = import.meta.env.VITE_SERVER_API_URL || "http://localhost:1002";
+const API_URL = import.meta.env.VITE_SERVER_API_URL || "http://192.168.1.120:1002";
 
 export default function SetupTempAccount() {
   const nav = useNavigate();

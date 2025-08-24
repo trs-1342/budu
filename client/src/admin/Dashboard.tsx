@@ -1,5 +1,5 @@
-import StatCard from "../components/StatCard";
-import { getPages, getSite, getUsers } from "../store";
+import StatCard from "./components/StatCard";
+import { getPages, getSite, getUsers } from "./store";
 
 export default function Dashboard() {
   const site = getSite();
