@@ -60,11 +60,5 @@ Hem kullanıcı arayüzü hem de sunucu tarafı ayrı ayrı kodlanmış, modern 
 
 ## İletişim
 
-- Instagram: @jolanar444  
-- LinkedIn: Bushra Dukhan  
-- WhatsApp: +90 537 494 39 71  
-- Email: jolanar444@gmail.com
-
-## Telif Hakkı
-
-Tüm hakları saklıdır © Bushra 2025
+- Instagram: @hhattabh
+- Email: hattab1342@gmail.com
