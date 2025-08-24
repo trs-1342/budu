@@ -28,15 +28,16 @@ Hem kullanıcı arayüzü hem de sunucu tarafı ayrı ayrı kodlanmış, modern 
 
 ## Kurulum Adımları
 1. Eğer bilgisayarınızda [Git](https://git-scm.com/downloads) yüklü değilse, önce yükleyin.
-2. Depoyu klonlayın:
+2. Eğer bilgisayarınızda [Node.js](https://nodejs.org/en/download) yüklü değilse, önce yükleyin.
+3. Depoyu klonlayın:
    `git clone https://github.com/trs-1342/budu.git`
-3. Client klasörüne geçin ve bağımlılıkları yükleyin:
+4. Client klasörüne geçin ve bağımlılıkları yükleyin:
    `cd budu/client
    npm i`
-4. Ardından server klasörüne geçin ve bağımlılıkları yükleyin:
+5. Ardından server klasörüne geçin ve bağımlılıkları yükleyin:
    `cd ../server
    npm i`
-5. Projeyi çalıştırmak için:
+6. Projeyi çalıştırmak için:
    - Client (React): `npm run dev`
    - Server (Node.js): `node server.js`
 
