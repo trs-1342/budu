@@ -13,11 +13,11 @@ export default function AdminLayout() {
       <aside className="admin-aside">
         <h3 className="admin-logo">Admin</h3>
         <nav className="admin-nav">
-          <Link to="">Dashboard</Link>
-          <Link to="site">Site Ayarları</Link>
-          <Link to="account">Hesabım</Link>
-          <Link to="users">Kullanıcılar</Link>
-          <Link to="pages">Sayfalar</Link>
+          <Link to="/admin/">Dashboard</Link>
+          <Link to="/admin/site">Site Ayarları</Link>
+          <Link to="/admin/account">Hesabım</Link>
+          <Link to="/admin/users">Kullanıcılar</Link>
+          <Link to="/admin/pages">Sayfalar</Link>
           <button
             className="admin-logout"
             onClick={() => {

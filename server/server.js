@@ -225,7 +225,7 @@ app.get("/api/admin/ping", auth, (req, res) => {
 
 app.get("/", (req, res) => {
   console.log("Health check request received");
-  res.send("Server çalışıyor! Hoş geldiniz.");
+  res.send("server is running, go to <a href='http://localhost:1001'>client</a>");
 });
 
 app.listen(PORT, () => {

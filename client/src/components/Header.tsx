@@ -1,11 +1,24 @@
-import "../css/Header.css";
-import defaultLogo from "../assets/buduLogo.svg";
+import { useEffect, useState } from "react";
 import { getSite } from "../admin/store";
+import defaultLogo from "../assets/buduLogo.svg";
+import "../css/Header.css";
+
+import { useContext } from "react";
+import { SiteNameContext } from "../main";
 
 function Header() {
-  const site = getSite();
+  const siteName = useContext(SiteNameContext);
+  const [site, setSite] = useState(getSite());
+  // Basit: belirli aralıkla tazele (hemen çalışır)
+  useEffect(() => {
+    const t = setInterval(() => setSite(getSite()), 400);
+    return () => clearInterval(t);
+  }, []);
   const logo = site.logoDataUrl || defaultLogo;
-  const name = site.siteName || "Budu";
+  // const name = site.siteName || "Budu";
+
+
+
   return (
     <header className="App-header reveal reveal--center">
       <div>
@@ -30,9 +43,9 @@ function Header() {
               <a href="/">الصفحة الرئيسية</a>
             </li>
           </ul>
-          <span id="span-budu-logo" title={name}>
+          <span id="span-budu-logo" title={siteName}>
             <a href="/">
-              <img src={logo} id="budu-logo" alt={name} />
+              <img src={logo} id="budu-logo" alt={siteName} />
             </a>
           </span>
         </nav>

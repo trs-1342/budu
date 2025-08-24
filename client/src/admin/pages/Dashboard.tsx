@@ -26,26 +26,6 @@ export default function Dashboard() {
           sub="Backend bağlanacak"
         />
       </div>
-
-      <div style={{ marginTop: 20 }}>
-        <h3>Hızlı Aksiyonlar</h3>
-        <div
-          style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}
-        >
-          <a className="admin-btn" href="/admin/site">
-            Site ayarları
-          </a>
-          <a className="admin-btn" href="/admin/account">
-            Hesabım
-          </a>
-          <a className="admin-btn" href="/admin/users">
-            Kullanıcılar
-          </a>
-          <a className="admin-btn" href="/admin/pages">
-            Sayfalar
-          </a>
-        </div>
-      </div>
     </div>
   );
 }

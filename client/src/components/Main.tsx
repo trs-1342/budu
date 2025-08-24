@@ -1,3 +1,4 @@
+import React, { useContext } from "react";
 import defaultPhoto from "../assets/buduPhoto.png";
 import src1 from "../assets/image1.png";
 import src2 from "../assets/image2.png";
@@ -5,10 +6,12 @@ import src3 from "../assets/image3.png";
 import src4 from "../assets/image4.png";
 import "../css/Main.css";
 import { getSite } from "../admin/store";
+import { SiteNameContext } from "../main";
 
 function Main() {
   const site = getSite();
   const hero = site.heroPhotoDataUrl || defaultPhoto;
+  const siteName = useContext(SiteNameContext);
   return (
     <>
       <main className="main-container">
