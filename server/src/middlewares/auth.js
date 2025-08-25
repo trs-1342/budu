@@ -1,20 +1,38 @@
-import jwt from "jsonwebtoken";
+// server/src/middlewares/auth.js
+import { pool } from "../db.js";
 
 export function requireAuth(requiredRole) {
-  return (req, res, next) => {
+  return async (req, res, next) => {
     try {
-      const header = req.headers.authorization || "";
-      const token = header.startsWith("Bearer ") ? header.slice(7) : null;
-      if (!token) return res.status(401).json({ error: "no token" });
+      const token = req.cookies["budu.sid"];
+      if (!token) {
+        return res.status(401).json({ error: "not authenticated" });
+      }
 
-      const payload = jwt.verify(token, process.env.JWT_SECRET);
-      req.user = payload; // { id, username, role }
-      if (requiredRole && payload.role !== requiredRole)
+      const [rows] = await pool.query(
+        `SELECT id, username, role, status 
+         FROM users 
+         WHERE session_token=? AND session_expires > NOW() AND status='active'`,
+        [token]
+      );
+
+      const user = rows[0];
+      if (!user) {
+        res.clearCookie("budu.sid");
+        return res.status(401).json({ error: "invalid session" });
+      }
+
+      // Rol kontrolü
+      if (requiredRole && user.role !== requiredRole) {
         return res.status(403).json({ error: "forbidden" });
+      }
 
+      // Kullanıcı bilgilerini req'e ekle
+      req.user = user;
       next();
-    } catch (e) {
-      return res.status(401).json({ error: "invalid token" });
+    } catch (error) {
+      console.error("Auth middleware error:", error);
+      return res.status(500).json({ error: "authentication error" });
     }
   };
 }

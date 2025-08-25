@@ -15,15 +15,48 @@ export default function AdminLogin() {
     e.preventDefault();
     setLoading(true);
     setMsg("");
+
     const fd = new FormData(e.target as HTMLFormElement);
     const username = String(fd.get("username") || "").trim();
     const password = String(fd.get("password") || "").trim();
+
+    // Validation
+    if (!username || !password) {
+      setMsg("Kullanıcı adı ve şifre gerekli");
+      setLoading(false);
+      return;
+    }
+
     try {
-      const { token } = await AuthAPI.login(username, password);
-      localStorage.setItem("budu.jwt", token);
-      nav(redirectTo, { replace: true });
+      console.log("Login attempt:", { username, redirectTo }); // Debug log
+
+      const response = await AuthAPI.login(username, password);
+
+      console.log("Login response:", response); // Debug log
+
+      if (response.success && response.user) {
+        console.log("Login successful, redirecting to:", redirectTo);
+
+        // Başarılı giriş - yönlendirme yap
+        nav(redirectTo, { replace: true });
+      } else {
+        setMsg("Giriş başarısız - Kullanıcı bilgileri alınamadı");
+      }
     } catch (err: any) {
-      setMsg(err.message || "Giriş hatası");
+      console.error("Login error:", err); // Debug log
+
+      // Hata mesajlarını daha anlaşılır yap
+      if (err.message.includes("401")) {
+        setMsg("Kullanıcı adı veya şifre hatalı");
+      } else if (err.message.includes("403")) {
+        setMsg("Hesabınız devre dışı bırakılmış");
+      } else if (err.message.includes("400")) {
+        setMsg("Geçersiz bilgiler");
+      } else if (err.message.includes("500")) {
+        setMsg("Sunucu hatası, lütfen tekrar deneyin");
+      } else {
+        setMsg(err.message || "Giriş hatası");
+      }
     } finally {
       setLoading(false);
     }
@@ -47,6 +80,8 @@ export default function AdminLogin() {
             className="admin-input"
             placeholder="admin"
             autoComplete="username"
+            required
+            disabled={loading}
           />
           <div className="admin-row">
             <label className="admin-label" htmlFor="password">
@@ -56,6 +91,7 @@ export default function AdminLogin() {
               type="button"
               className="admin-link"
               onClick={() => setShow((s) => !s)}
+              disabled={loading}
             >
               {show ? "Gizle" : "Göster"}
             </button>
@@ -67,20 +103,28 @@ export default function AdminLogin() {
             placeholder="••••••••"
             type={show ? "text" : "password"}
             autoComplete="current-password"
+            required
+            disabled={loading}
           />
           <button className="admin-btn" type="submit" disabled={loading}>
             {loading ? "Giriş yapılıyor…" : "Giriş Yap"}
           </button>
           <button
             className="admin-btn"
-            type="submit"
-            onClick={() => {
-              nav("/");
-            }}
+            type="button"
+            onClick={() => nav("/")}
+            disabled={loading}
           >
             Anasayfa
           </button>
-          {msg && <p className="admin-msg">{msg}</p>}
+          {msg && (
+            <p
+              className="admin-msg"
+              style={{ color: msg.includes("başarılı") ? "green" : "red" }}
+            >
+              {msg}
+            </p>
+          )}
         </form>
         <footer className="admin-foot">
           <span>© {new Date().getFullYear()} Budu | Admin</span>

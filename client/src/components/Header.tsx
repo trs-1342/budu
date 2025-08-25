@@ -1,4 +1,3 @@
-// src/components/Header.tsx
 import "../css/Header.css";
 import buduLogo from "../assets/buduLogo.svg";
 import { useEffect, useState } from "react";
@@ -37,7 +36,11 @@ export default function Header() {
           </ul>
           <span id="span-budu-logo">
             <Link to="/">
-              <img src={logoSrc} id="budu-logo" alt="Budu logo" />
+              <img
+                src={logoSrc || "../assets/buduLogo-b.png"}
+                id="budu-logo"
+                alt="Budu logo"
+              />
             </Link>
           </span>
         </nav>

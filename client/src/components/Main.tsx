@@ -30,7 +30,7 @@ function Main() {
           style={{ "--reveal-stagger": "120ms" } as React.CSSProperties}
         >
           <img
-            src={photo}
+            src={photo || defaultPhoto}
             alt="Profil fotoğrafı"
             className="reveal reveal--left"
           />

@@ -1,4 +1,4 @@
-const BASE = import.meta.env.VITE_SERVER_API_URL || "http://192.168.1.120:1002";
+const BASE = import.meta.env.VITE_SERVER_API_URL || "http://192.168.1.112:1002";
 const token = () => localStorage.getItem("budu.jwt") || "";
 
 export async function api(path: string, opts: RequestInit = {}) {
