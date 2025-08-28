@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -9,5 +9,10 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script type="module">
+      document.title = import.meta.env.VITE_SITE_NAME || "Budu";
+      const meta = document.querySelector('meta[name="site-name"]');
+      if (meta) meta.setAttribute("content", document.title);
+    </script>
   </body>
 </html>

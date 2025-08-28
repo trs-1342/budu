@@ -1,32 +1,41 @@
-import buduPhoto from "../assets/buduPhoto.png";
+// src/components/Main.tsx
+import defaultPhoto from "../assets/buduPhoto.png";
 import src1 from "../assets/image1.png";
 import src2 from "../assets/image2.png";
 import src3 from "../assets/image3.png";
 import src4 from "../assets/image4.png";
 import "../css/Main.css";
+import { useEffect, useState } from "react";
+import { PublicAPI } from "../lib/api";
 
 function Main() {
+  const [homePhoto, setHomePhoto] = useState<string | null>(null);
+
+  useEffect(() => {
+    PublicAPI.settings().then((s) => setHomePhoto(s?.home_photo_url || null));
+    const h = (e: any) => {
+      if (e.detail?.home_photo_url) setHomePhoto(e.detail.home_photo_url);
+    };
+    window.addEventListener("budu-settings-updated", h);
+    return () => window.removeEventListener("budu-settings-updated", h);
+  }, []);
+
+  const photo = homePhoto || defaultPhoto;
   return (
     <>
       <main className="main-container">
-        {/* SOL TARAF – Fotoğraf + durum rozeti */}
         <section
           className="left-section reveal reveal--fade"
           data-reveal-group
           style={{ "--reveal-stagger": "120ms" } as React.CSSProperties}
         >
           <img
-            src={buduPhoto}
+            src={photo}
             alt="Profil fotoğrafı"
             className="reveal reveal--left"
-            /* istersen sadece bu görsele özel hız/mesafe:
-       style={{ "--reveal-distance":"28px", "--reveal-duration":".6s" } as React.CSSProperties}
-    */
           />
           <span className="status-badge reveal reveal--up">نشط بالعمل</span>
         </section>
-
-        {/* SAĞ TARAF – Başlık, metin, butonlar */}
         <section className="right-section reveal reveal--right">
           <h2 className="title">بشرى دخان</h2>
           <p className="subtitle">

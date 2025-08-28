@@ -67,7 +67,7 @@
 }
 
 .admin-form input {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .admin-label {
@@ -191,4 +191,33 @@
 }
 .dash h2 {
   margin: 0 0 8px;
+}
+
+/* ! */
+
+/* basit tablo */
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.admin-table th,
+.admin-table td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: left;
+  padding: 10px;
+}
+.admin-table th {
+  font-weight: 700;
+  opacity: 0.9;
+}
+.admin-table tr:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* stat grid kartları için ufak görünüm iyileştirme */
+.stat-card {
+  transition: transform 0.12s ease;
+}
+.stat-card:hover {
+  transform: translateY(-1px);
 }

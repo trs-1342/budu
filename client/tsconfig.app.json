@@ -23,5 +23,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src"]
+  "include": ["src", "../server/src/routes", "../server/src/db.js", "../server/src/index.js", "../server/src/middlewares"]
 }

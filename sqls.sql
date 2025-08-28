@@ -1,0 +1,48 @@
+CREATE DATABASE IF NOT EXISTS BUDU;
+USE BUDU;
+
+CREATE TABLE IF NOT EXISTS users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  username VARCHAR(30) NOT NULL UNIQUE,
+  password VARCHAR(255) NOT NULL,
+  avatar_url VARCHAR(255) NULL,
+  role ENUM('admin','editor','viewer') NOT NULL DEFAULT 'admin',
+  status ENUM('active','disabled') NOT NULL DEFAULT 'active',
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME DEFAULT NULL
+);
+
+CREATE TABLE IF NOT EXISTS email_messages (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  username TEXT DEFAULT('anonim'),
+  email TEXT NOT NULL,
+  message TEXT NOT NULL,
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS site_settings (
+  id TINYINT PRIMARY KEY DEFAULT 1,
+  site_name VARCHAR(120) NOT NULL DEFAULT 'Budu',
+  logo_url VARCHAR(255) NULL,
+  home_photo_url VARCHAR(255) NULL,
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+INSERT IGNORE INTO site_settings (id) VALUES (1);
+
+CREATE TABLE IF NOT EXISTS pages (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(120) NOT NULL,
+  path VARCHAR(160) NOT NULL UNIQUE,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  show_in_menu BOOLEAN NOT NULL DEFAULT TRUE,
+  order_index INT NOT NULL DEFAULT 0,
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+INSERT IGNORE INTO pages (title, path, order_index) VALUES
+('الصفحة الرئيسية','/',0),
+('منهجية العمل','/handbook',1),
+('مشاريعي','/my-projects',2),
+('الدورات','/courses',3),
+('منتجاتي','/my-products',4);

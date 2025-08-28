@@ -14,9 +14,11 @@ import AdminLayout from "./admin/Layout";
 import ProtectedRoute from "./admin/ProtectedRoute";
 
 import useRevealOnScroll from "./hooks/useRevealOnScroll";
+import useSiteMeta from "./hooks/useSiteMeta";
 
 function App() {
   useRevealOnScroll();
+  useSiteMeta();
   return (
     <BrowserRouter>
       <div className="min-h-screen flex flex-col">

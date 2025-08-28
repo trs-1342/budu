@@ -1,7 +1,26 @@
+// src/components/Header.tsx
 import "../css/Header.css";
 import buduLogo from "../assets/buduLogo.svg";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { PublicAPI } from "../lib/api";
 
-function Header() {
+export default function Header() {
+  const [menu, setMenu] = useState<{ title: string; path: string }[]>([]);
+  const [logo, setLogo] = useState<string | null>(null);
+
+  useEffect(() => {
+    PublicAPI.menu().then(setMenu);
+    PublicAPI.settings().then((s) => setLogo(s?.logo_url || null));
+    const h = (e: any) => {
+      if (e.detail?.logo_url) setLogo(e.detail.logo_url);
+    };
+    window.addEventListener("budu-settings-updated", h);
+    return () => window.removeEventListener("budu-settings-updated", h);
+  }, []);
+
+  const logoSrc = logo || buduLogo;
+
   return (
     <header className="App-header reveal reveal--center">
       <div>
@@ -10,31 +29,19 @@ function Header() {
             <button id="project-button"> هل لديك مشروع؟</button>
           </span>
           <ul>
-            <li>
-              <a href="/my-products">منتجاتي</a>
-            </li>
-            <li>
-              <a href="/courses">الدورات</a>
-            </li>
-            <li>
-              <a href="/my-projects">مشاريعي</a>
-            </li>
-            <li>
-              <a href="/handbook"> منهجية العمل</a>
-            </li>
-            <li>
-              <a href="/">الصفحة الرئيسية</a>
-            </li>
+            {menu.map((item) => (
+              <li key={item.path}>
+                <Link to={item.path}>{item.title}</Link>
+              </li>
+            ))}
           </ul>
           <span id="span-budu-logo">
-            <a href="/">
-              <img src={buduLogo} id="budu-logo" alt="Budu logo" />
-            </a>
+            <Link to="/">
+              <img src={logoSrc} id="budu-logo" alt="Budu logo" />
+            </Link>
           </span>
         </nav>
       </div>
     </header>
   );
 }
-
-export default Header;
