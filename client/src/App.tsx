@@ -10,8 +10,9 @@ import MyProducts from "./pages/MyProducts";
 import FirstGate from "./admin/FirstGate";
 import SetupTempAccount from "./admin/SetupTempAccount";
 import AdminLogin from "./admin/Login";
-import AdminLayout from "./admin/Layout";
+import AdminLayout from "./admin/AdminLayout";
 import ProtectedRoute from "./admin/ProtectedRoute";
+import MessageDetail from "./admin/pages/MessageDetail";
 
 import useRevealOnScroll from "./hooks/useRevealOnScroll";
 
@@ -31,6 +32,8 @@ function App() {
             <Route path="/admin/gate" element={<FirstGate />} />
             <Route path="/admin/setup" element={<SetupTempAccount />} />
             <Route path="/admin/login" element={<AdminLogin />} />
+
+            {/* Admin route'larını ProtectedRoute içine alıyoruz */}
             <Route
               path="/admin/*"
               element={

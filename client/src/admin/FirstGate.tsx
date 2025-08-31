@@ -1,26 +1,60 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./admin.css";
 import { openGate } from "./state";
+import { api } from "./auth/api"; // API'yi import ediyoruz
 
 const FALLBACK_GATE = "password"; // geçici
 
 export default function FirstGate() {
-  const [val, setVal] = useState("");
-  const [msg, setMsg] = useState("");
-  const [show, setShow] = useState(false);
+  const [value, setValue] = useState("");
+  const [message, setMessage] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [checkingAdmin, setCheckingAdmin] = useState(true); // Yüklenme durumu
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Sunucudan admin kullanıcısı var mı kontrol et
+    const checkAdminExists = async () => {
+      try {
+        const response = await api.get("/setup/check-admin");
+        if (response.data.exists) {
+          // Admin kullanıcısı varsa doğrudan giriş sayfasına yönlendir
+          navigate("/admin/login", { replace: true });
+        } else {
+          setCheckingAdmin(false);
+        }
+      } catch (error) {
+        console.error("Admin kontrolü sırasında hata:", error);
+        setCheckingAdmin(false);
+      }
+    };
+
+    checkAdminExists();
+  }, [navigate]);
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const gate = import.meta.env.VITE_ADMIN_GATE || FALLBACK_GATE;
-    if (val === gate) {
+    const gatePassword = import.meta.env.VITE_ADMIN_GATE || FALLBACK_GATE;
+
+    if (value === gatePassword) {
       openGate();
       navigate("/admin/setup", { replace: true });
     } else {
-      setMsg("Geçersiz admin password.");
+      setMessage("Geçersiz admin şifresi.");
     }
   };
+
+  if (checkingAdmin) {
+    return (
+      <div className="admin-wrap">
+        <div className="admin-noise" aria-hidden />
+        <section className="admin-card">
+          <p>Kontrol ediliyor...</p>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="admin-wrap">
@@ -38,23 +72,23 @@ export default function FirstGate() {
             <input
               id="gate"
               className="admin-input"
-              type={show ? "text" : "password"}
+              type={showPassword ? "text" : "password"}
               placeholder="••••••••"
-              value={val}
-              onChange={(e) => setVal(e.target.value)}
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
             />
             <button
               type="button"
               className="admin-link"
-              onClick={() => setShow((s) => !s)}
+              onClick={() => setShowPassword((s) => !s)}
             >
-              {show ? "Gizle" : "Göster"}
+              {showPassword ? "Gizle" : "Göster"}
             </button>
           </div>
           <button className="admin-btn" type="submit">
             Devam
           </button>
-          {msg && <p className="admin-msg">{msg}</p>}
+          {message && <p className="admin-msg">{message}</p>}
         </form>
       </section>
     </div>

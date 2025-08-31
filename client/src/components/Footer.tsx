@@ -5,8 +5,35 @@ import { MdEmail } from "react-icons/md";
 import "../css/Footer.css";
 
 export default function Footer() {
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const fd = new FormData(form);
+    const name = String(fd.get("name") || "");
+    const email = String(fd.get("email") || "");
+    const subject = String(fd.get("subject") || "");
+    const message = String(fd.get("message") || "");
+
+    // const API_URL = import.meta.env.VITE_SERVER_API_URL || "http://192.168.1.120:1002";
+
+    if (!message.trim()) {
+      alert("Lütfen bir mesaj yazın.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`http://localhost:1002/api/public/email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, subject, message }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Gönderim başarısız");
+      alert("Mesajınız alındı. Teşekkürler!");
+      form.reset();
+    } catch (err: any) {
+      alert(err.message || "Sunucu hatası");
+    }
   };
 
   return (
@@ -33,13 +60,19 @@ export default function Footer() {
               aria-label="email"
             />
             <input
-              className="message-input"
+              className="subscribe-input"
               type="text"
+              name="subject"
+              placeholder="subject"
+              aria-label="subject"
+            />
+            <textarea
+              className="message-input"
               name="message"
+              id="message"
               placeholder="text message..."
               aria-label="message"
-            />
-
+            ></textarea>
             <button className="subscribe-btn" type="submit">
               أرسل
             </button>
@@ -63,7 +96,9 @@ export default function Footer() {
         className="socials"
         aria-label="Sosyal bağlantılar"
         data-reveal-group
-        style={{ "--reveal-stagger": "80ms", gridArea:"16" } as React.CSSProperties}
+        style={
+          { "--reveal-stagger": "80ms", gridArea: "16" } as React.CSSProperties
+        }
       >
         <div className="social-item reveal reveal--center grid-area-1">
           <span className="icon" aria-hidden style={{ fontSize: 32 }}>
