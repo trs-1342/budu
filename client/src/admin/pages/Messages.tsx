@@ -1,133 +1,238 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api } from "../auth/api";
+import { apiFetch, API_BASE } from "../lib/auth";
+import { BiSolidArchiveIn } from "react-icons/bi";
+import { MdMarkunread, MdMarkEmailUnread } from "react-icons/md";
+import "../css/messages-scoped.css";
 
-type Message = {
-  id: string;
+type Msg = {
+  id: number;
   name: string;
   email: string;
   subject: string;
-  content: string;
-  createdAt: string;
-  is_read: boolean;
-  is_archived: boolean;
+  message: string;
+  is_read: 0 | 1;
+  is_archived: 0 | 1;
+  created_at: string;
 };
 
+type Status = "unread" | "read" | "archived" | "all";
+
 export default function Messages() {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [debouncedTerm, setDebouncedTerm] = useState(searchTerm); // 👈 yeni state
+  const [q, setQ] = useState("");
+  const [status, setStatus] = useState<Status>("unread");
+  const [list, setList] = useState<Msg[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [live, setLive] = useState(false);
+
+  const inputRef = useRef<HTMLInputElement>(null);
+  const debouncedQ = useDebounced(q, 250);
   const navigate = useNavigate();
 
-  // Debounce etkisi
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setDebouncedTerm(searchTerm);
-    }, 400); // 400ms sonra yazı durursa arar
-
-    return () => clearTimeout(timeout);
-  }, [searchTerm]);
-
-  // Arama ve veri çekme
-  useEffect(() => {
-    loadMessages();
-  }, [debouncedTerm]);
-
-  const loadMessages = async () => {
+  async function load() {
+    setLoading(true);
+    setErr(null);
     try {
-      setLoading(true);
-      const { data } = await api.get("/admin/messages", {
-        params: { q: debouncedTerm },
-      });
-      setMessages(data.items || []);
+      const url = new URL(`${API_BASE}/api/messages`);
+      if (debouncedQ.trim()) url.searchParams.set("q", debouncedQ.trim());
+      url.searchParams.set("status", status);
+      const r = await apiFetch(url.toString());
+      const data = await r.json();
+      if (!r.ok) throw new Error(data?.error || "Liste alınamadı");
+      setList(data.list as Msg[]);
+    } catch (e: any) {
+      setErr(e.message || "Hata");
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const formatDate = (s: string) =>
-    new Date(s).toLocaleDateString("tr-TR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  useEffect(() => {
+    load(); /* eslint-disable-next-line */
+  }, [debouncedQ, status]);
 
-  const goDetail = (id: string) => navigate(`/admin/messages/${id}`);
+  // focus kaybolmasın
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  // canlı (polling)
+  useEffect(() => {
+    if (!live) return;
+    const t = setInterval(load, 5000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line
+  }, [live, debouncedQ, status]);
+
+  async function toggleRead(m: Msg, read: boolean) {
+    const prev = [...list];
+    setList((cur) =>
+      cur.map((x) => (x.id === m.id ? { ...x, is_read: read ? 1 : 0 } : x))
+    );
+    try {
+      const r = await apiFetch(`${API_BASE}/api/messages/${m.id}/read`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ read }),
+      });
+      if (!r.ok) throw new Error("Güncellenemedi");
+    } catch {
+      setList(prev);
+    }
+  }
+
+  async function toggleArchive(m: Msg, archived: boolean) {
+    const prev = [...list];
+    setList((cur) =>
+      cur.map((x) =>
+        x.id === m.id ? { ...x, is_archived: archived ? 1 : 0 } : x
+      )
+    );
+    try {
+      const r = await apiFetch(`${API_BASE}/api/messages/${m.id}/archive`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ archived }),
+      });
+      if (!r.ok) throw new Error("Güncellenemedi");
+    } catch {
+      setList(prev);
+    }
+  }
+
+  async function remove(m: Msg) {
+    const prev = [...list];
+    setList((cur) => cur.filter((x) => x.id !== m.id));
+    try {
+      const r = await apiFetch(`${API_BASE}/api/messages/${m.id}`, {
+        method: "DELETE",
+      });
+      if (!r.ok) throw new Error("Silinemedi");
+    } catch {
+      setList(prev);
+    }
+  }
+
+  const empty = !loading && !err && list.length === 0;
 
   return (
-    <div>
-      <h2>Gelen Mesajlar</h2>
+    <div className="admin-scope msg-wrap">
+      <div className="msg-header">
+        {/* Filtre kartları (ikon yerleri hazır) */}
+        <div className="msg-tabs">
+          <button
+            className={`tab ${status === "unread" ? "active" : ""}`}
+            onClick={() => setStatus("unread")}
+            title="Okunmadı"
+          >
+            {<MdMarkEmailUnread fontSize={25} />}
+          </button>
+          <button
+            className={`tab ${status === "read" ? "active" : ""}`}
+            onClick={() => setStatus("read")}
+            title="Okundu"
+          >
+            {<MdMarkunread fontSize={25} />}
+          </button>
+          <button
+            className={`tab ${status === "archived" ? "active" : ""}`}
+            onClick={() => setStatus("archived")}
+            title="Arşiv"
+          >
+            {<BiSolidArchiveIn size={25} />}
+          </button>
+          <button
+            className={`tab ${status === "all" ? "active" : ""}`}
+            onClick={() => setStatus("all")}
+            title="Hepsi"
+          >
+            Hepsi
+          </button>
+        </div>
 
-      <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
+        {/* Arama solda, odak sabit */}
         <input
-          className="admin-input"
-          placeholder="Mesajlarda ara..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          ref={inputRef}
+          className="msg-search"
+          placeholder="Ara: ad, email, konu, içerik…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          aria-label="Mesajlarda ara"
         />
-        <button className="admin-btn" onClick={loadMessages}>
-          Yenile
-        </button>
+
+        <div className="msg-actions-bar">
+          <button className="btn" onClick={load} title="Yenile">
+            Yenile
+          </button>
+          <label className="live">
+            <input
+              type="checkbox"
+              checked={live}
+              onChange={(e) => setLive(e.target.checked)}
+            />
+            Canlı
+          </label>
+        </div>
       </div>
 
-      {/* Yükleme sadece tabloyu etkilesin */}
-      <div className="table-scroll table-wrap">
-        {loading ? (
-          <div style={{ padding: 20 }}>Yükleniyor...</div>
-        ) : (
-          <table className="table">
-            <thead>
-              <tr>
-                <th style={{ width: 88 }}>ID</th>
-                <th style={{ width: 180 }}>Gönderen</th>
-                <th style={{ width: 260 }}>Email</th>
-                <th style={{ width: 240 }}>Konu</th>
-                <th>Mesaj</th>
-                <th style={{ width: 200 }}>Tarih</th>
-                <th style={{ width: 120 }}>İşlemler</th>
-              </tr>
-            </thead>
-            <tbody>
-              {messages.map((m) => (
-                <tr
-                  key={m.id}
-                  className={m.is_read ? "" : "tr-unread"}
-                  onClick={() => goDetail(m.id)}
-                  style={{ cursor: "pointer" }}
-                >
-                  <td>{m.id}</td>
-                  <td>{m.name}</td>
-                  <td className="td-ellipsis">{m.email}</td>
-                  <td className="td-ellipsis">{m.subject}</td>
-                  <td className="td-ellipsis">{m.content}</td>
-                  <td>{formatDate(m.createdAt)}</td>
-                  <td>
-                    <button
-                      className="row-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        goDetail(m.id);
-                      }}
-                    >
-                      Detay
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {messages.length === 0 && (
-                <tr>
-                  <td colSpan={7} style={{ textAlign: "center", padding: 22 }}>
-                    Kayıt yok.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        )}
+      {err && <div className="alert error">{err}</div>}
+      {empty && <div className="alert warn">Hiç mesaj yok.</div>}
+
+      <div className="msg-list">
+        {list.map((m) => (
+          <article
+            key={m.id}
+            className={`msg-item ${m.is_read ? "is-read" : ""}`}
+          >
+            <header className="msg-head">
+              <div className="msg-from">
+                <b>{m.name}</b> <span className="dim">&lt;{m.email}&gt;</span>
+              </div>
+              <time className="msg-time">
+                {new Date(m.created_at).toLocaleString()}
+              </time>
+            </header>
+
+            <div className="msg-subject">{m.subject}</div>
+
+            {/* tek satırda ... kısaltma */}
+            <p className="msg-text line-1">{m.message}</p>
+
+            <div className="msg-actions">
+              <button
+                className="btn"
+                onClick={() => navigate(`/admin/messages/${m.id}`)}
+              >
+                Detay
+              </button>
+              <button className="btn" onClick={() => toggleRead(m, !m.is_read)}>
+                {m.is_read ? "Okunmadı yap" : "Okundu işaretle"}
+              </button>
+              <button
+                className="btn"
+                onClick={() => toggleArchive(m, !m.is_archived)}
+              >
+                {m.is_archived ? "Arşivden çıkar" : "Arşivle"}
+              </button>
+              <button className="btn danger" onClick={() => remove(m)}>
+                Sil
+              </button>
+            </div>
+          </article>
+        ))}
+
+        {loading && <div className="msg-loading">Yükleniyor…</div>}
       </div>
     </div>
   );
+}
+
+function useDebounced<T>(value: T, delay = 250) {
+  const [v, setV] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setV(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return v;
 }

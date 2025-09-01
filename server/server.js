@@ -1,661 +1,608 @@
+// server.js
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const helmet = require("helmet");
 const cookieParser = require("cookie-parser");
+const mysql = require("mysql2/promise");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const { randomUUID } = require("crypto");
-const rateLimit = require("express-rate-limit");
-const {
-  comparePasswords,
-  signAccess,
-  signRefresh,
-  setRefreshCookie,
-} = require("./util");
-const db = require("./db");
-const { durToMs, sha256Hex } = require("./util");
+const ms = require("ms");
+const fs = require("fs");
+const path = require("path");
+const multer = require("multer");
+const { customAlphabet } = require("nanoid");
+const mime = require("mime-types");
 
+const {
+  PORT = 1002,
+  CLIENT_ORIGIN = "http://localhost:1001",
+  DB_HOST,
+  DB_PORT,
+  DB_USER,
+  DB_PASS,
+  DB_NAME,
+  JWT_ACCESS_SECRET,
+  JWT_REFRESH_SECRET,
+  ACCESS_TTL = "10m",
+  REFRESH_TTL = "30d",
+} = process.env;
+
+// --- DB pool ---
+const pool = mysql.createPool({
+  host: DB_HOST,
+  port: Number(DB_PORT || 3306),
+  user: DB_USER,
+  password: DB_PASS,
+  database: DB_NAME,
+  connectionLimit: 10,
+  charset: "utf8mb4_unicode_ci",
+});
+
+// --- helpers ---
+const isBcrypt = (s) => typeof s === "string" && /^\$2[aby]\$/.test(s);
+const signAccess = (payload) =>
+  jwt.sign(payload, JWT_ACCESS_SECRET, { expiresIn: ACCESS_TTL });
+const signRefresh = (payload) =>
+  jwt.sign(payload, JWT_REFRESH_SECRET, { expiresIn: REFRESH_TTL });
+const verifyAccess = (t) => jwt.verify(t, JWT_ACCESS_SECRET);
+const verifyRefresh = (t) => jwt.verify(t, JWT_REFRESH_SECRET);
+
+// tiny auth mw
+function requireAuth(req, res, next) {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) return res.status(401).json({ error: "Yetkisiz" });
+    req.user = verifyAccess(token);
+    next();
+  } catch {
+    return res.status(401).json({ error: "Yetkisiz" });
+  }
+}
+
+// --- app ---
 const app = express();
-app.use(helmet());
-app.use(express.json({ limit: "2mb" }));
+app.use(express.json());
 app.use(cookieParser());
 
-const ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:1001"; // 1001 portuna izin ver
+function assertId(req, res, next) {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({ error: "Geçersiz id" });
+  }
+  next();
+}
+
+// CORS (credentials + dev allowlist)
+const allowlist = new Set([
+  CLIENT_ORIGIN,
+  "http://localhost:1001",
+  "http://127.0.0.1:1001",
+]);
+
 app.use(
   cors({
-    origin: ORIGIN,
+    origin: (origin, cb) => {
+      if (!origin || [...allowlist].some((o) => o === origin)) cb(null, true);
+      else cb(null, false);
+    },
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
-// ---------- JWT yardımcıları ----------
-const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET;
-const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
-const ACCESS_TTL = process.env.ACCESS_TTL || "10m";
-const REFRESH_TTL = process.env.REFRESH_TTL || "30d";
+const nanoid = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 16);
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
+  filename: (_req, file, cb) => {
+    const extByName = path.extname(file.originalname).replace(".", "");
+    const extByMime = mime.extension(file.mimetype) || "";
+    const ext = (extByName || extByMime || "bin").toLowerCase();
+    cb(null, `${Date.now()}-${nanoid()}.${ext}`);
+  },
+});
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+});
 
-// function signAccess(u) {
-//   return jwt.sign({ sub: u.id, role: u.role }, ACCESS_SECRET, {
-//     expiresIn: ACCESS_TTL,
-//   });
-// }
-// function signRefresh(u) {
-//   const sid = randomUUID(); // jti benzeri
-//   return jwt.sign({ sub: u.id, ver: u.token_version, sid }, REFRESH_SECRET, {
-//     expiresIn: REFRESH_TTL,
-//   });
-// }
-// function setRefreshCookie(res, token) {
-//   res.cookie("refreshToken", token, {
-//     httpOnly: true,
-//     secure: process.env.NODE_ENV === "production",
-//     sameSite: "lax",
-//     path: "/api/auth",
-//     maxAge: durToMs(REFRESH_TTL) || 30 * 24 * 3600 * 1000,
-//   });
-// }
-function clearRefreshCookie(res) {
-  res.clearCookie("refreshToken", { path: "/api/auth" });
-}
+const UPLOAD_DIR = path.resolve(__dirname, "uploads");
+if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+app.use(
+  "/uploads",
+  express.static(UPLOAD_DIR, { maxAge: "365d", immutable: true })
+);
 
-// ---------- Middleware ----------
-function requireAuth(req, res, next) {
-  const [type, tok] = String(req.headers.authorization || "").split(" ");
-  if (type !== "Bearer" || !tok)
-    return res.status(401).json({ message: "Unauthorized" });
-  try {
-    const p = jwt.verify(tok, ACCESS_SECRET);
-    req.userId = p.sub;
-    req.role = p.role;
-    next();
-  } catch {
-    res.status(401).json({ message: "Unauthorized" });
-  }
-}
-function requireRole(role) {
-  return (req, res, next) => {
-    if (req.role !== role)
-      return res.status(403).json({ message: "Forbidden" });
-    next();
-  };
-}
+// health
+app.get("/health", (_req, res) => res.json({ ok: true }));
 
-// ---------- Repo yardımcıları ----------
-async function findUserByIdentifier(identifier) {
-  if (!identifier) return null;
-  const conn = await db.getConnection();
-  try {
-    if (identifier.includes("@")) {
-      const [r] = await conn.query(
-        "SELECT * FROM users WHERE email = ? LIMIT 1",
-        [identifier]
-      );
-      return r[0] || null;
-    } else {
-      const [r] = await conn.query(
-        "SELECT * FROM users WHERE username = ? LIMIT 1",
-        [identifier]
-      );
-      return r[0] || null;
-    }
-  } finally {
-    conn.release();
-  }
-}
-async function findUserById(id) {
-  const [r] = await db.query("SELECT * FROM users WHERE id = ? LIMIT 1", [id]);
-  return r[0] || null;
-}
-async function createSession(userId, refreshToken, userAgent, ip) {
-  const hash = sha256Hex(refreshToken);
-  const expires = new Date(
-    Date.now() + (durToMs(REFRESH_TTL) || 30 * 24 * 3600 * 1000)
-  );
-  await db.query(
-    `INSERT INTO auth_sessions (user_id, refresh_hash, user_agent, ip_address, expires_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    [userId, hash, userAgent || null, null, expires]
-  );
-}
-async function getSessionByToken(refreshToken) {
-  const hash = sha256Hex(refreshToken);
-  const [r] = await db.query(
-    `SELECT * FROM auth_sessions
-     WHERE refresh_hash = ? AND revoked_at IS NULL AND expires_at > NOW() LIMIT 1`,
-    [hash]
-  );
-  return r[0] || null;
-}
-async function rotateSession(refreshToken, newRefreshToken) {
-  const oldHash = sha256Hex(refreshToken);
-  const newHash = sha256Hex(newRefreshToken);
-  const expires = new Date(
-    Date.now() + (durToMs(REFRESH_TTL) || 30 * 24 * 3600 * 1000)
-  );
-  await db.query(
-    `UPDATE auth_sessions
-     SET refresh_hash = ?, expires_at = ?
-     WHERE refresh_hash = ? AND revoked_at IS NULL`,
-    [newHash, expires, oldHash]
-  );
-}
-async function revokeSession(refreshToken) {
-  const hash = sha256Hex(refreshToken);
-  await db.query(
-    `UPDATE auth_sessions SET revoked_at = NOW() WHERE refresh_hash = ?`,
-    [hash]
-  );
-}
-async function revokeAllSessionsForUser(userId) {
-  await db.query(
-    `UPDATE auth_sessions SET revoked_at = NOW() WHERE user_id = ? AND revoked_at IS NULL`,
-    [userId]
-  );
-}
-async function bumpTokenVersion(userId) {
-  await db.query(
-    `UPDATE users SET token_version = token_version + 1 WHERE id = ?`,
-    [userId]
-  );
-}
-
-// ---------- AUTH Routes ----------
+// AUTHS
 app.post("/api/auth/login", async (req, res) => {
-  const { identifier, password } = req.body;
-  const [user] = await db.query(
-    "SELECT * FROM users WHERE username = ? OR email = ? LIMIT 1",
-    [identifier, identifier]
-  );
+  try {
+    const { emailOrUsername, password } = req.body || {};
+    if (!emailOrUsername || !password) {
+      return res.status(400).json({ error: "Eksik alan" });
+    }
 
-  if (!user) {
-    return res.status(403).json({ message: "no-admin" });
+    const [rows] = await pool.query(
+      "SELECT id, username, email, password, create_at FROM users WHERE username = ? OR email = ? LIMIT 1",
+      [emailOrUsername, emailOrUsername]
+    );
+
+    if (!rows.length) return res.status(401).json({ error: "Geçersiz kimlik" });
+    const user = rows[0];
+
+    // parola kontrolü (plain veya bcrypt)
+    let ok = false;
+    if (isBcrypt(user.password))
+      ok = bcrypt.compareSync(password, user.password);
+    else ok = password === user.password;
+
+    if (!ok) return res.status(401).json({ error: "Geçersiz kimlik" });
+
+    // otomatik bcrypt migrasyon (plain ise)
+    if (!isBcrypt(user.password)) {
+      const hash = bcrypt.hashSync(user.password, 10);
+      await pool.query("UPDATE users SET password = ? WHERE id = ?", [
+        hash,
+        user.id,
+      ]);
+    }
+
+    const access = signAccess({ sub: user.id, username: user.username });
+    const refresh = signRefresh({ sub: user.id });
+
+    res.cookie("refresh", refresh, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: false, // prod: true
+      maxAge: ms(REFRESH_TTL),
+    });
+
+    res.json({ access });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Sunucu hatası" });
   }
-
-  const isValid = comparePasswords(password, user.password_hash);
-  if (!isValid) {
-    return res.status(401).json({ message: "wrong-password" });
-  }
-
-  const accessToken = signAccess(user);
-  const refreshToken = signRefresh(user);
-  setRefreshCookie(res, refreshToken);
-
-  const { password_hash, ...safeUser } = user;
-  res.json({ accessToken, user: safeUser });
 });
 
 app.post("/api/auth/refresh", async (req, res) => {
-  const tok = req.cookies?.refreshToken;
-  if (!tok) return res.status(401).json({ message: "No refresh" });
-
   try {
-    const payload = jwt.verify(tok, REFRESH_SECRET); // { sub, ver, sid }
-    const u = await findUserById(payload.sub);
-    if (!u || u.token_version !== payload.ver)
-      return res.status(401).json({ message: "Invalid refresh" });
-
-    const sess = await getSessionByToken(tok);
-    if (!sess) return res.status(401).json({ message: "Invalid session" });
-
-    const accessToken = signAccess(u);
-
-    // Refresh rotation (güvenlik için önerilir)
-    const newRefresh = signRefresh(u);
-    await rotateSession(tok, newRefresh);
-    setRefreshCookie(res, newRefresh);
-
-    const { password_hash, ...safe } = u;
-    res.json({ accessToken, user: safe });
+    const token = req.cookies?.refresh;
+    if (!token) return res.status(401).json({ error: "Yenileme yok" });
+    const payload = verifyRefresh(token);
+    const access = signAccess({ sub: payload.sub });
+    res.json({ access });
   } catch {
-    return res.status(401).json({ message: "Invalid refresh" });
+    return res.status(401).json({ error: "Geçersiz yenileme" });
   }
 });
 
-app.post("/api/auth/logout", async (req, res) => {
-  const tok = req.cookies?.refreshToken;
-  if (tok) {
-    try {
-      const p = jwt.verify(tok, REFRESH_SECRET);
-      await revokeSession(tok);
-    } catch {}
-  }
-  clearRefreshCookie(res);
+app.post("/api/auth/logout", async (_req, res) => {
+  res.clearCookie("refresh");
   res.json({ ok: true });
 });
 
-app.get("/api/auth/me", requireAuth, async (req, res) => {
-  const u = await findUserById(req.userId);
-  if (!u) return res.status(401).json({ message: "Unauthorized" });
-  const { password_hash, ...safe } = u;
-  res.json(safe);
+app.get("/api/auth/me", async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) return res.status(401).json({ error: "Yetkisiz" });
+    const payload = verifyAccess(token);
+
+    const [rows] = await pool.query(
+      "SELECT id, username, email, create_at FROM users WHERE id = ? LIMIT 1",
+      [payload.sub]
+    );
+    if (!rows.length) return res.status(401).json({ error: "Yetkisiz" });
+
+    res.json({ user: rows[0] });
+  } catch {
+    return res.status(401).json({ error: "Token geçersiz" });
+  }
 });
 
-// ---------- ADMIN: Users (Ayarlar → Kullanıcılar) ----------
-app.get(
-  "/api/admin/users",
-  requireAuth,
-  requireRole("admin"),
-  async (req, res) => {
-    const { q = "", role = "" } = req.query;
-    const like = `%${q}%`;
+// PUBLIC: PAGES & POSTS & CONTACT
+app.get("/api/public/posts", async (req, res) => {
+  try {
+    const page = String(req.query.page || "").trim(); // pages.key_slug
+    const q = String(req.query.q || "").trim();
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 12, 1), 100);
+    const offset = Math.max(parseInt(req.query.offset) || 0, 0);
+
+    const where = [
+      `p.status='published'`,
+      `p.visibility='public'`,
+      `p.published_at IS NOT NULL`,
+      `p.published_at <= NOW()`,
+    ];
     const params = [];
-    let sql = `SELECT id, username, name, email, role, is_active
-             FROM users WHERE 1=1`;
+
+    if (page) {
+      where.push(`EXISTS (
+        SELECT 1 FROM post_pages pp
+        JOIN pages pg ON pg.id = pp.page_id
+        WHERE pp.post_id = p.id AND pg.key_slug = ?
+      )`);
+      params.push(page);
+    }
     if (q) {
-      sql += ` AND (username LIKE ? OR name LIKE ? OR email LIKE ?)`;
+      where.push(`(p.title LIKE ? OR p.excerpt LIKE ? OR p.content_md LIKE ?)`);
+      const like = `%${q}%`;
       params.push(like, like, like);
     }
-    if (role) {
-      sql += ` AND role = ?`;
-      params.push(role);
-    }
-    sql += ` ORDER BY id DESC LIMIT 200`;
-    const [rows] = await db.query(sql, params);
-    res.json({ items: rows });
-  }
-);
 
-app.get(
-  "/api/admin/users/:id",
-  requireAuth,
-  requireRole("admin"),
-  async (req, res) => {
-    const [rows] = await db.query(
-      `SELECT id, username, name, email, role, is_active FROM users WHERE id = ? LIMIT 1`,
-      [req.params.id]
-    );
-    if (!rows[0]) return res.status(404).json({ message: "Bulunamadı" });
-    res.json(rows[0]);
-  }
-);
+    const sql = `SELECT p.id, p.title, p.slug, p.cover_url, p.excerpt, p.published_at, p.created_at, p.updated_at, p.pinned
+       FROM posts p
+       WHERE ${where.join(" AND ")}
+       ORDER BY p.pinned DESC, p.published_at DESC, p.id DESC
+       LIMIT ? OFFSET ?`;
+    params.push(limit, offset);
 
-app.post(
-  "/api/admin/users",
-  requireAuth,
-  requireRole("admin"),
-  async (req, res) => {
-    const {
-      username,
-      name,
-      email,
-      role = "viewer",
-      active = true,
-      password,
-    } = req.body || {};
-    if (!username && !email)
-      return res.status(400).json({ message: "Username veya email zorunlu" });
-    if (!password || password.length < 10)
-      return res.status(400).json({ message: "Şifre min 10 karakter" });
-
-    const passHash = await bcrypt.hash(password, 10);
-    try {
-      const [r] = await db.query(
-        `INSERT INTO users (username, name, email, role, is_active, password_hash)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-        [
-          username || null,
-          name || "",
-          email || null,
-          role,
-          active ? 1 : 0,
-          passHash,
-        ]
-      );
-      const [row] = await db.query(
-        `SELECT id, username, name, email, role, is_active FROM users WHERE id = ?`,
-        [r.insertId]
-      );
-      res.status(201).json(row[0]);
-    } catch (e) {
-      if (e && e.code === "ER_DUP_ENTRY") {
-        return res
-          .status(409)
-          .json({ message: "Username veya email zaten var" });
-      }
-      throw e;
-    }
-  }
-);
-
-app.patch(
-  "/api/admin/users/:id",
-  requireAuth,
-  requireRole("admin"),
-  async (req, res) => {
-    const { name, email, role, active } = req.body || {};
-    try {
-      await db.query(
-        `UPDATE users SET
-         name = COALESCE(?, name),
-         email = ?,
-         role = COALESCE(?, role),
-         is_active = COALESCE(?, is_active),
-         updated_at = NOW()
-       WHERE id = ?`,
-        [
-          name ?? null,
-          email ?? null,
-          role ?? null,
-          active == null ? null : active ? 1 : 0,
-          req.params.id,
-        ]
-      );
-    } catch (e) {
-      if (e && e.code === "ER_DUP_ENTRY") {
-        return res.status(409).json({ message: "Email zaten kullanımda" });
-      }
-      throw e;
-    }
-    const [row] = await db.query(
-      `SELECT id, username, name, email, role, is_active FROM users WHERE id = ?`,
-      [req.params.id]
-    );
-    res.json(row[0]);
-  }
-);
-
-app.post(
-  "/api/admin/users/:id/password",
-  requireAuth,
-  requireRole("admin"),
-  async (req, res) => {
-    const { newPassword } = req.body || {};
-    if (!newPassword || newPassword.length < 10)
-      return res.status(400).json({ message: "Şifre min 10 karakter" });
-    const hash = await bcrypt.hash(newPassword, 10);
-
-    await db.query(
-      `UPDATE users SET password_hash = ?, updated_at = NOW() WHERE id = ?`,
-      [hash, req.params.id]
-    );
-    // tüm cihazlardan çıkart: token_version++ + user oturumlarını revoke
-    await bumpTokenVersion(req.params.id);
-    await revokeAllSessionsForUser(req.params.id);
-
-    res.json({ ok: true });
-  }
-);
-
-app.delete(
-  "/api/admin/users/:id",
-  requireAuth,
-  requireRole("admin"),
-  async (req, res) => {
-    await db.query(`DELETE FROM users WHERE id = ?`, [req.params.id]);
-    res.json({ ok: true });
-  }
-);
-
-// ---------- İlk admin yoksa seed (geçici) ----------
-// İlk admin kullanıcısını oluştur (yetkilendirme gerektirmez)
-app.post("/api/setup/first-admin", async (req, res) => {
-  try {
-    // Önceden bir admin var mı kontrol et
-    const [r] = await db.query(
-      `SELECT COUNT(*) AS c FROM users WHERE role='admin'`
-    );
-
-    if (r[0].c > 0) {
-      return res
-        .status(403)
-        .json({ message: "Zaten bir admin kullanıcısı var." });
-    }
-
-    const { username, name, email, password } = req.body || {};
-
-    if (!username || !name || !email || !password) {
-      return res.status(400).json({ message: "Eksik alanlar var." });
-    }
-
-    if (password.length < 10) {
-      return res
-        .status(400)
-        .json({ message: "Şifre en az 10 karakter olmalıdır." });
-    }
-
-    const passHash = await bcrypt.hash(password, 10);
-
-    const [result] = await db.query(
-      `INSERT INTO users (username, name, email, role, is_active, password_hash)
-       VALUES (?, ?, ?, 'admin', 1, ?)`,
-      [username, name, email, passHash]
-    );
-
-    const [rows] = await db.query(
-      `SELECT id, username, name, email, role, is_active FROM users WHERE id = ?`,
-      [result.insertId]
-    );
-
-    res.status(201).json(rows[0]);
-  } catch (e) {
-    if (e.code === "ER_DUP_ENTRY") {
-      return res
-        .status(409)
-        .json({ message: "Kullanıcı adı veya email zaten var." });
-    }
-    console.error("First admin creation error:", e);
-    res.status(500).json({ message: "Sunucu hatası." });
-  }
-});
-
-// !
-
-// Admin kullanıcısı var mı kontrol et
-app.get("/api/setup/check-admin", async (req, res) => {
-  try {
-    const [r] = await db.query(
-      `SELECT COUNT(*) AS c FROM users WHERE role='admin'`
-    );
-    res.json({ exists: r[0].c > 0 });
-  } catch (error) {
-    console.error("Admin kontrol hatası:", error);
-    res.status(500).json({ message: "Sunucu hatası." });
-  }
-});
-
-const publicLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 dk
-  max: 3, // dakikada 20 istek
-});
-
-app.post("/api/public/email", publicLimiter, async (req, res) => {
-  try {
-    // Footer formundan gelecek alanlar
-    const { name = "Anonim", email, subject, message } = req.body || {};
-    if (!message || String(message).trim().length === 0) {
-      return res.status(400).json({ error: "message is required" });
-    }
-
-    const sql =
-      "INSERT INTO email_messages (name, email, subject, content, created_at) VALUES (?, ?, ?, ?, NOW())";
-    await db.query(sql, [name, email, subject, message]);
-    return res.json({ ok: true });
+    const [rows] = await pool.query(sql, params);
+    res.json({ list: rows, limit, offset, page, q });
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: "Sunucu hatası" });
   }
 });
 
-// ---------- MESAJ YÖNETİMİ ----------
-// Tüm mesajları listele
-app.get("/api/admin/messages", requireAuth, async (req, res) => {
-  const { q = "", archived = "" } = req.query;
-  const like = `%${q}%`;
-
+// Detay: /api/public/posts/:slug (yalnız published & public)
+app.get("/api/public/posts/:slug", async (req, res) => {
   try {
-    let sql = `
-      SELECT id, name, email, subject, content, created_at
-      FROM email_messages 
-      WHERE 1=1
-    `;
+    const slug = String(req.params.slug || "").trim();
+    const [rows] = await pool.query(
+      `SELECT p.id, p.title, p.slug, p.cover_url, p.excerpt, p.content_md, p.published_at, p.created_at, p.updated_at
+       FROM posts p
+       WHERE p.slug = ? AND p.status='published' AND p.visibility='public' AND p.published_at IS NOT NULL AND p.published_at <= NOW()
+       LIMIT 1`,
+      [slug]
+    );
+    if (!rows.length) return res.status(404).json({ error: "Bulunamadı" });
+    res.json({ item: rows[0] });
+  } catch {
+    res.status(500).json({ error: "Sunucu hatası" });
+  }
+});
+
+app.post("/api/public/email", async (req, res) => {
+  try {
+    let { name, email, subject, message } = req.body || {};
+    name = String(name || "").trim();
+    email = String(email || "").trim();
+    subject = String(subject || "").trim();
+    message = String(message || "").trim();
+
+    if (!name || !email || !subject || !message) {
+      return res.status(400).json({ error: "Eksik alan" });
+    }
+    if (name.length > 100 || email.length > 191 || subject.length > 191) {
+      return res.status(400).json({ error: "Alan uzunluğu aşıldı" });
+    }
+    // basit email kontrolü
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: "E-posta geçersiz" });
+    }
+
+    const [result] = await pool.query(
+      "INSERT INTO messages (name, email, subject, message) VALUES (?,?,?,?)",
+      [name, email, subject, message]
+    );
+    res.status(201).json({ ok: true, id: result.insertId });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Sunucu hatası" });
+  }
+});
+
+app.post(
+  "/api/admin/upload",
+  requireAuth,
+  upload.single("file"),
+  (req, res) => {
+    const f = req.file;
+    if (!f) return res.status(400).json({ error: "Dosya yok" });
+    const publicPath = `/uploads/${f.filename}`;
+    const fullUrl = `${req.protocol}://${req.get("host")}${publicPath}`;
+    res.status(201).json({
+      ok: true,
+      path: publicPath, // istemcide: `${API_BASE}${path}`
+      url: fullUrl,
+      name: f.originalname,
+      size: f.size,
+      type: f.mimetype,
+    });
+  }
+);
+
+app.get("/api/admin/pages", requireAuth, async (_req, res) => {
+  const [rows] = await pool.query(
+    "SELECT id, key_slug, title, path FROM pages ORDER BY sort ASC"
+  );
+  res.json({ pages: rows });
+});
+
+// Liste: /api/admin/posts?status=all|draft|published|archived|scheduled&q=...
+app.get("/api/admin/posts", requireAuth, async (req, res) => {
+  try {
+    const status = String(req.query.status || "all");
+    const q = String(req.query.q || "").trim();
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 50, 1), 200);
+    const offset = Math.max(parseInt(req.query.offset) || 0, 0);
+
+    const where = [];
+    const params = [];
+    if (status !== "all") {
+      where.push("p.status = ?");
+      params.push(status);
+    }
+    if (q) {
+      where.push("(p.title LIKE ? OR p.excerpt LIKE ? OR p.content_md LIKE ?)");
+      const like = `%${q}%`;
+      params.push(like, like, like);
+    }
+
+    let sql = `SELECT p.id, p.title, p.slug, p.status, p.visibility, p.pinned, p.published_at, p.updated_at
+               FROM posts p`;
+    if (where.length) sql += ` WHERE ` + where.join(" AND ");
+    sql += ` ORDER BY p.updated_at DESC, p.id DESC LIMIT ? OFFSET ?`;
+    params.push(limit, offset);
+
+    const [rows] = await pool.query(sql, params);
+    res.json({ list: rows, limit, offset, status, q });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Sunucu hatası" });
+  }
+});
+
+function toMysqlDatetime(d) {
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(
+    d.getHours()
+  )}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+app.post("/api/admin/posts/save", requireAuth, async (req, res) => {
+  const {
+    id,
+    title,
+    slug,
+    cover_url,
+    excerpt,
+    content_md,
+    status = "draft",
+    visibility = "public",
+    pinned = 0,
+    published_at = null,
+    page_ids = [],
+  } = req.body || {};
+
+  if (!title || !slug || !content_md) {
+    return res.status(400).json({ error: "Eksik alan" });
+  }
+
+  // yayınlıysa ve tarih verilmemişse şimdi
+  let pub = published_at;
+  if (status === "published" && !pub) pub = toMysqlDatetime(new Date());
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    if (!id) {
+      const [r] = await conn.query(
+        `INSERT INTO posts (author_id,title,slug,cover_url,excerpt,content_md,status,visibility,pinned,published_at)
+         VALUES (NULL,?,?,?,?,?,?,?,?,?)`,
+        [
+          title,
+          slug,
+          cover_url || null,
+          excerpt || null,
+          content_md,
+          status,
+          visibility,
+          pinned ? 1 : 0,
+          pub, // olabilir: NULL ya da 'YYYY-mm-dd HH:MM:SS'
+        ]
+      );
+      const newId = r.insertId;
+
+      if (Array.isArray(page_ids) && page_ids.length) {
+        const values = page_ids.map((pid) => [newId, pid]);
+        await conn.query(`INSERT INTO post_pages (post_id, page_id) VALUES ?`, [
+          values,
+        ]);
+      }
+
+      await conn.commit();
+      return res.status(201).json({ ok: true, id: newId });
+    } else {
+      await conn.query(
+        `UPDATE posts SET title=?, slug=?, cover_url=?, excerpt=?, content_md=?, status=?, visibility=?, pinned=?, published_at=?
+         WHERE id=?`,
+        [
+          title,
+          slug,
+          cover_url || null,
+          excerpt || null,
+          content_md,
+          status,
+          visibility,
+          pinned ? 1 : 0,
+          pub, // not: published değilse ve null ise null kalır
+          id,
+        ]
+      );
+
+      await conn.query(`DELETE FROM post_pages WHERE post_id=?`, [id]);
+      if (Array.isArray(page_ids) && page_ids.length) {
+        const values = page_ids.map((pid) => [id, pid]);
+        await conn.query(`INSERT INTO post_pages (post_id, page_id) VALUES ?`, [
+          values,
+        ]);
+      }
+
+      await conn.commit();
+      return res.json({ ok: true, id });
+    }
+  } catch (e) {
+    await conn.rollback();
+    console.error(e);
+    return res
+      .status(e && e.code === "ER_DUP_ENTRY" ? 409 : 500)
+      .json({
+        error:
+          e && e.code === "ER_DUP_ENTRY" ? "Slug zaten var" : "Sunucu hatası",
+      });
+  } finally {
+    conn.release();
+  }
+});
+
+// Tekil getir (admin)
+app.get("/api/admin/posts/:id", requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  const [rows] = await pool.query(`SELECT * FROM posts WHERE id=?`, [id]);
+  if (!rows.length) return res.status(404).json({ error: "Bulunamadı" });
+
+  const [maps] = await pool.query(
+    `SELECT page_id FROM post_pages WHERE post_id=?`,
+    [id]
+  );
+  res.json({ item: rows[0], page_ids: maps.map((r) => r.page_id) });
+});
+
+// Sil
+app.delete("/api/admin/posts/:id", requireAuth, async (req, res) => {
+  await pool.query(`DELETE FROM posts WHERE id=?`, [Number(req.params.id)]);
+  res.json({ ok: true });
+});
+// !
+
+// ADMIN: MESSAGES
+app.get("/api/messages/stats", requireAuth, async (_req, res) => {
+  try {
+    const [rows] = await pool.query(`
+      SELECT
+        COUNT(*) AS total,
+        SUM(CASE WHEN is_archived = 0 AND is_read = 0 THEN 1 ELSE 0 END) AS unread,
+        SUM(CASE WHEN is_archived = 0 AND is_read = 1 THEN 1 ELSE 0 END) AS read_count,
+        SUM(CASE WHEN is_archived = 1 THEN 1 ELSE 0 END) AS archived
+      FROM messages
+    `);
+    const r = rows[0] || { total: 0, unread: 0, read_count: 0, archived: 0 };
+    res.json({
+      total: Number(r.total) || 0,
+      unread: Number(r.unread) || 0,
+      read: Number(r.read_count) || 0,
+      archived: Number(r.archived) || 0,
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Sunucu hatası" });
+  }
+});
+
+app.get("/api/messages", requireAuth, async (req, res) => {
+  try {
+    const q = String(req.query.q || "").trim();
+    const status = String(req.query.status || "all"); // unread|read|archived|all
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 100, 1), 500);
+    const offset = Math.max(parseInt(req.query.offset) || 0, 0);
+
+    const where = [];
     const params = [];
 
+    if (status === "unread") where.push("is_read = 0 AND is_archived = 0");
+    else if (status === "read") where.push("is_read = 1 AND is_archived = 0");
+    else if (status === "archived") where.push("is_archived = 1");
+    // all -> filtre yok
+
     if (q) {
-      sql += ` AND (name LIKE ? OR email LIKE ? OR subject LIKE ? OR content LIKE ?)`;
+      where.push(
+        "(name LIKE ? OR email LIKE ? OR subject LIKE ? OR message LIKE ?)"
+      );
+      const like = `%${q}%`;
       params.push(like, like, like, like);
     }
 
-    sql += ` ORDER BY created_at DESC`;
+    let sql =
+      "SELECT id, name, email, subject, message, is_read, is_archived, created_at FROM messages";
+    if (where.length) sql += " WHERE " + where.join(" AND ");
+    sql += " ORDER BY created_at DESC LIMIT ? OFFSET ?";
+    params.push(limit, offset);
 
-    const [rows] = await db.query(sql, params);
-
-    // Mesajları formatlayalım
-    const items = rows.map((row) => ({
-      id: row.id,
-      name: row.name,
-      email: row.email,
-      subject: row.subject,
-      content: row.content,
-      createdAt: row.created_at,
-      is_read: row.is_read || false,
-      is_archived: row.is_archived || false,
-    }));
-
-    res.json({ items });
-  } catch (error) {
-    console.error("Mesajlar getirilirken hata:", error);
-    res.status(500).json({ message: "Sunucu hatası." });
+    const [rows] = await pool.query(sql, params);
+    res.json({ list: rows, limit, offset, q, status });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Sunucu hatası" });
   }
 });
 
-// Tekil mesaj getir
-app.get("/api/admin/messages/:id", requireAuth, async (req, res) => {
-  const { id } = req.params;
-
+// Detay
+app.get("/api/messages/:id", requireAuth, assertId, async (req, res) => {
   try {
-    const [rows] = await db.query(
-      `SELECT id, name, email, subject, content, created_at 
-       FROM email_messages WHERE id = ?`,
+    const id = Number(req.params.id);
+    const [rows] = await pool.query(
+      "SELECT id, name, email, subject, message, is_read, is_archived, created_at FROM messages WHERE id = ?",
       [id]
     );
-
-    if (rows.length === 0) {
-      return res.status(404).json({ message: "Mesaj bulunamadı." });
-    }
-
-    const message = rows[0];
-
-    res.json({
-      id: message.id,
-      name: message.name,
-      email: message.email,
-      subject: message.subject,
-      content: message.content,
-      created_at: message.created_at,
-      is_read: message.is_read || false,
-      is_archived: message.is_archived || false,
-    });
-  } catch (error) {
-    console.error("Mesaj getirilirken hata:", error);
-    res.status(500).json({ message: "Sunucu hatası." });
+    if (!rows.length) return res.status(404).json({ error: "Bulunamadı" });
+    res.json({ item: rows[0] });
+  } catch {
+    res.status(500).json({ error: "Sunucu hatası" });
   }
 });
 
-// Mesajı arşivle/arşivden çıkar
-// Mesajı arşivle/arşivden çıkar
-app.patch("/api/admin/messages/:id/archive", requireAuth, async (req, res) => {
-  const { id } = req.params;
-  const { archived } = req.body;
-
+// Okundu/okunmadı
+app.patch("/api/messages/:id/read", requireAuth, assertId, async (req, res) => {
   try {
-    await db.query(
-      `UPDATE email_messages SET is_archived = ? WHERE id = ?`, // contact_messages → email_messages
-      [archived ? 1 : 0, id]
-    );
-
+    const id = Number(req.params.id);
+    const read = req.body?.read ? 1 : 0;
+    await pool.query("UPDATE messages SET is_read = ? WHERE id = ?", [
+      read,
+      id,
+    ]);
     res.json({ ok: true });
-  } catch (error) {
-    console.error("Mesaj arşivlenirken hata:", error);
-    res.status(500).json({ message: "Sunucu hatası." });
+  } catch {
+    res.status(500).json({ error: "Sunucu hatası" });
   }
 });
 
-// Mesajı sil
-app.delete("/api/admin/messages/:id", requireAuth, async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    await db.query(
-      `DELETE FROM email_messages WHERE id = ?`, // contact_messages → email_messages
-      [id]
-    );
-
-    res.json({ ok: true });
-  } catch (error) {
-    console.error("Mesaj silinirken hata:", error);
-    res.status(500).json({ message: "Sunucu hatası." });
-  }
-});
-
-// Email yanıtı gönder
-app.post("/api/admin/messages/:id/reply", requireAuth, async (req, res) => {
-  const { id } = req.params;
-  const { subject, message } = req.body;
-
-  try {
-    // Önce mesajı al
-    const [rows] = await db.query(
-      `SELECT email FROM contact_messages WHERE id = ?`,
-      [id]
-    );
-
-    if (rows.length === 0) {
-      return res.status(404).json({ message: "Mesaj bulunamadı." });
+// Arşivle / Arşivden çıkar
+app.patch(
+  "/api/messages/:id/archive",
+  requireAuth,
+  assertId,
+  async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const archived = req.body?.archived ? 1 : 0;
+      await pool.query("UPDATE messages SET is_archived = ? WHERE id = ?", [
+        archived,
+        id,
+      ]);
+      res.json({ ok: true });
+    } catch {
+      res.status(500).json({ error: "Sunucu hatası" });
     }
+  }
+);
 
-    const recipientEmail = rows[0].email;
-
-    // Burada email gönderme işlemini yapın
-    // Örnek: await sendEmail(recipientEmail, subject, message);
-    console.log(
-      `Email gönderiliyor: ${recipientEmail}, Konu: ${subject}, Mesaj: ${message}`
-    );
-
-    res.json({ ok: true, message: "Yanıt gönderildi." });
-  } catch (error) {
-    console.error("Yanıt gönderilirken hata:", error);
-    res.status(500).json({ message: "Sunucu hatası." });
+// Sil
+app.delete("/api/messages/:id", requireAuth, assertId, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    await pool.query("DELETE FROM messages WHERE id = ?", [id]);
+    res.json({ ok: true });
+  } catch {
+    res.status(500).json({ error: "Sunucu hatası" });
   }
 });
 
-const pages = [
-  { id: "1", title: "Ana Sayfa", slug: "anasayfa", updatedAt: new Date() },
-  { id: "2", title: "Hakkımızda", slug: "hakkimizda", updatedAt: new Date() },
-];
+// 404
+app.use((_req, res) => res.status(404).json({ error: "Not Found" }));
 
-const posts = {
-  1: [
-    { id: "p1", title: "Hoş Geldiniz", createdAt: new Date() },
-    { id: "p2", title: "Duyurular", createdAt: new Date() },
-  ],
-  2: [{ id: "p3", title: "Biz Kimiz?", createdAt: new Date() }],
-};
-
-app.get("/api/admin/pages", (req, res) => {
-  res.json({ items: pages });
-});
-
-app.post("/api/admin/pages", (req, res) => {
-  const { title, slug } = req.body;
-  const newPage = {
-    id: Date.now().toString(),
-    title,
-    slug,
-    updatedAt: new Date(),
-  };
-  pages.push(newPage);
-  res.json({ item: newPage });
-});
-
-app.get("/api/admin/pages/:id/posts", (req, res) => {
-  const id = req.params.id;
-  res.json({ items: posts[id] || [] });
-});
-
-const port = Number(process.env.PORT || 2431);
-app.listen(port, () => {
-  console.log("[API] Listening on :" + port, "origin:", ORIGIN);
+// start
+app.listen(Number(PORT), () => {
+  console.log(`API listening on http://localhost:${PORT}`);
 });

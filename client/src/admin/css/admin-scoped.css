@@ -1,0 +1,32 @@
+/* Google font yüklenir ama sadece .admin-scope içinde kullanılır */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap");
+
+/* Tüm değişkenler ve temel stiller sadece admin alanında geçerli */
+.admin-scope {
+  --bg: #000;
+  --text: #fff;
+  --muted: #b3b3b3;
+  --elev: #0d0d0d;
+  --line: #1a1a1a;
+  --card: #101010;
+
+  background: var(--bg);
+  color: var(--text);
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial,
+    sans-serif;
+}
+
+/* Yardımcı kaplar */
+.admin-scope .admin-auth {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.admin-scope a {
+  color: inherit;
+  text-decoration: none;
+}
+.admin-scope a:hover {
+  text-decoration: underline;
+}

@@ -1,4 +1,3 @@
-// import React from "react";
 import type { FormEvent } from "react";
 import { FaWhatsapp, FaInstagram, FaLinkedin } from "react-icons/fa6";
 import { MdEmail } from "react-icons/md";
@@ -51,6 +50,7 @@ export default function Footer() {
               name="name"
               placeholder="name"
               aria-label="name"
+              autoComplete="name"
             />
             <input
               className="subscribe-input"
@@ -58,6 +58,8 @@ export default function Footer() {
               name="email"
               placeholder="email"
               aria-label="email"
+              required
+              autoComplete="email"
             />
             <input
               className="subscribe-input"
@@ -65,6 +67,7 @@ export default function Footer() {
               name="subject"
               placeholder="subject"
               aria-label="subject"
+              required
             />
             <textarea
               className="message-input"
@@ -72,6 +75,7 @@ export default function Footer() {
               id="message"
               placeholder="text message..."
               aria-label="message"
+              required
             ></textarea>
             <button className="subscribe-btn" type="submit">
               أرسل

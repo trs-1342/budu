@@ -1,5 +1,11 @@
-// src/App.tsx
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  Outlet,
+} from "react-router-dom";
+// USER PAGES
 import Home from "./pages/Home";
 import Handbook from "./pages/Handbook";
 import NotFound from "./pages/NotFound";
@@ -7,14 +13,28 @@ import MyProjects from "./pages/MyProjects";
 import Courses from "./pages/Courses";
 import MyProducts from "./pages/MyProducts";
 
-import FirstGate from "./admin/FirstGate";
-import SetupTempAccount from "./admin/SetupTempAccount";
-import AdminLogin from "./admin/Login";
-import AdminLayout from "./admin/AdminLayout";
-import ProtectedRoute from "./admin/ProtectedRoute";
-import MessageDetail from "./admin/pages/MessageDetail";
+// ADMIN PAGES
+import AdminLogin from "./admin/pages/AdminLogin";
+import AdminLayout from "./admin/components/AdminLayout";
+import Dashboard from "./admin/pages/Dashboard";
+import Account from "./admin/pages/Account";
+import Messages from "./admin/pages/Messages";
+import MessageDetail from "./admin/pages/MessageDetail.tsx";
+import Posts from "./admin/pages/Posts";
+import PostEditor from "./admin/pages/PostEditor";
 
 import useRevealOnScroll from "./hooks/useRevealOnScroll";
+
+function getAccessToken(): string | null {
+  return localStorage.getItem("access") || sessionStorage.getItem("access");
+}
+
+// korumalı rota
+function RequireAuth() {
+  const token = getAccessToken();
+  if (!token) return <Navigate to="/admin/login" replace />;
+  return <Outlet />;
+}
 
 function App() {
   useRevealOnScroll();
@@ -23,26 +43,25 @@ function App() {
       <div className="min-h-screen flex flex-col">
         <main className="flex-1">
           <Routes>
+            {/* public routers */}
             <Route path="/" element={<Home />} />
             <Route path="/handbook" element={<Handbook />} />
             <Route path="/my-projects" element={<MyProjects />} />
             <Route path="/courses" element={<Courses />} />
             <Route path="/my-products" element={<MyProducts />} />
-
-            <Route path="/admin/gate" element={<FirstGate />} />
-            <Route path="/admin/setup" element={<SetupTempAccount />} />
+            {/* admin routers */}
             <Route path="/admin/login" element={<AdminLogin />} />
-
-            {/* Admin route'larını ProtectedRoute içine alıyoruz */}
-            <Route
-              path="/admin/*"
-              element={
-                <ProtectedRoute>
-                  <AdminLayout />
-                </ProtectedRoute>
-              }
-            />
-
+            <Route element={<RequireAuth />}>
+              <Route element={<AdminLayout />}>
+                <Route path="/admin" element={<Dashboard />} />
+                <Route path="/admin/account" element={<Account />} />
+                <Route path="/admin/messages" element={<Messages />} />
+                <Route path="/admin/messages/:id" element={<MessageDetail />} />
+                <Route path="/admin/posts" element={<Posts />} />
+                <Route path="/admin/posts/new" element={<PostEditor />} />
+                <Route path="/admin/posts/:id" element={<PostEditor />} />
+              </Route>
+            </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>

@@ -1,32 +1,91 @@
+import { useEffect, useState } from "react";
+import { apiFetch, API_BASE } from "../lib/auth";
+import "../css/layout-scoped.css";
+
+type Stats = {
+  total: number;
+  unread: number;
+  read: number;
+  archived: number;
+};
+
 export default function Dashboard() {
-  // örnek metrik kartları
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function load() {
+    setLoading(true);
+    setErr(null);
+    try {
+      const r = await apiFetch(`${API_BASE}/api/messages/stats`);
+      const d = await r.json();
+      if (!r.ok) throw new Error(d?.error || "İstatistik alınamadı");
+      setStats(d as Stats);
+    } catch (e: any) {
+      setErr(e.message || "Hata");
+      setStats({ total: 0, unread: 0, read: 0, archived: 0 });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
   return (
-    <div
-      style={{
-        display: "grid",
-        gap: 16,
-        gridTemplateColumns: "repeat(4, minmax(0,1fr))",
-      }}
-    >
-      {[
-        { k: "Mesajlar", v: "128" },
-        { k: "Sayfalar", v: "12" },
-        { k: "Postlar", v: "34" },
-        { k: "Aktif Kullanıcı", v: "4" },
-      ].map((m) => (
+    <div className="ad-grid">
+      <div className="ad-card">
+        <h3 className="ad-card-title">Hoş geldin</h3>
+        <p className="ad-muted">Soldaki menüden sayfalara geçiş yap.</p>
+      </div>
+
+      <div className="ad-card">
+        <h3 className="ad-card-title">Durum</h3>
+        <ul className="ad-list">
+          <li>
+            Sunucu: <b>aktif</b>
+          </li>
+          <li>
+            Veritabanı: <b>bağlı</b>
+          </li>
+        </ul>
+      </div>
+
+      <div className="ad-card">
         <div
-          key={m.k}
           style={{
-            background: "#0f0f10",
-            border: "1px solid #1f1f1f",
-            borderRadius: 14,
-            padding: 16,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 8,
           }}
         >
-          <div style={{ opacity: 0.7, fontSize: 12 }}>{m.k}</div>
-          <div style={{ fontSize: 28, fontWeight: 800 }}>{m.v}</div>
+          <h3 className="ad-card-title">Mesaj İstatistikleri</h3>
+          <button className="ad-logout sm" onClick={load} title="Yenile">
+            Yenile
+          </button>
         </div>
-      ))}
+
+        {loading && <p className="ad-muted">Yükleniyor…</p>}
+        {err && <p className="ad-muted">Hata: {err}</p>}
+
+        <ul className="ad-list" style={{ marginTop: 8 }}>
+          <li>
+            Okunmamış: <b>{stats?.unread ?? 0}</b>
+          </li>
+          <li>
+            Okunmuş: <b>{stats?.read ?? 0}</b>
+          </li>
+          <li>
+            Arşiv: <b>{stats?.archived ?? 0}</b>
+          </li>
+          <li>
+            Toplam: <b>{stats?.total ?? 0}</b>
+          </li>
+        </ul>
+      </div>
     </div>
   );
 }

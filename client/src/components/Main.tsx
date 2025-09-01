@@ -28,7 +28,7 @@ function Main() {
 
         {/* SAĞ TARAF – Başlık, metin, butonlar */}
         <section className="right-section reveal reveal--right">
-          <h2 className="title">بشرى دخان</h2>
+          <h2 className="title">بشرى</h2>
           <p className="subtitle">
             مصممة ومصورة محترفة، أُدير حسابات التواصل الاجتماعي وأدير الحملات
             الإعلانية باحترافية. أمتلك خبرة في التسويق الرقمي وصناعة محتوى جذاب
