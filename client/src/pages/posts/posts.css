@@ -1,9 +1,12 @@
 .main-container {
   margin: 0 15vw;
-  display: flex; /* desktopta yan yana */
+  display: flex;
   gap: clamp(2rem, 4vw, 6rem);
   align-items: center;
-  font-family: "MassiraPen" !important;
+  font-family: "MassiraPen", Verdana, Geneva, Tahoma, sans-serif;
+  src: url("./fonts/29LT Massira Pen.otf") format("opentype");
+  font-weight: normal;
+  font-style: normal;
 }
 
 .posts {
@@ -76,4 +79,108 @@
 }
 .post-read:hover {
   border-bottom-color: #fff;
+}
+
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: clamp(1.2rem, 2.5vw, 2rem);
+}
+
+/* Kart */
+.product-card {
+  background: #f3efe9; /* sıcak gri/bej vibe */
+  border-radius: 22px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+.product-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.09);
+}
+
+/* Görsel kapsayıcı */
+.product-media {
+  display: block;
+  padding: clamp(10px, 1.4vw, 16px);
+}
+.product-media img {
+  width: 100%;
+  height: clamp(220px, 30vw, 340px);
+  object-fit: cover;
+  display: block;
+  background: #ececea;
+  border-radius: 18px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* İçerik */
+.product-content {
+  padding: clamp(1rem, 2.2vw, 1.5rem);
+}
+
+.product-name {
+  margin: 0 0 0.6rem;
+  font-size: clamp(21px, 2.6vw, 30px);
+  line-height: 1.25;
+  color: #111;
+}
+.product-name-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+.product-name-link:hover {
+  opacity: 0.9;
+}
+
+.product-desc {
+  margin: 0 0 1.1rem;
+  color: #555;
+  font-size: clamp(14px, 1.8vw, 17px);
+  line-height: 1.65;
+}
+
+/* Alt aksiyon */
+.product-actions {
+  display: flex;
+  align-items: center;
+}
+.product-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #111;
+  text-decoration: none;
+  font-weight: 600;
+  padding: 0.4rem 0.6rem;
+  border-radius: 10px;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.product-link:hover {
+  background: #eaeaea;
+  transform: translateX(2px);
+}
+.product-link-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .products-grid {
+    grid-template-columns: 1fr;
+  }
+  .products-section {
+    margin: 3rem 8vw 5rem;
+  }
+}
+
+/* reveal ile uyum (App.css'deki .reveal/.is-visible ile uyumlu) */
+.product-card.reveal {
+  will-change: transform, opacity;
 }

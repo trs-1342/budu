@@ -14,17 +14,11 @@ type Post = {
 };
 
 type Props = {
-  /** Hangi sayfaya ait postlar? pages.key_slug --> 'home' | 'projects' | 'services' ... */
-  pageKey: string;
-  /** Kaç adet getirilsin (default 10) */
+  pageKey: string; // pages.key_slug
   limit?: number;
-  /** İsteğe bağlı arama ifadesi */
   q?: string;
-  /** Ekstra className (opsiyonel) */
   className?: string;
-  /** Kartta özet gösterilsin mi? */
   showExcerpt?: boolean;
-  /** Kapak görseli gösterilsin mi? */
   showCover?: boolean;
 };
 
@@ -34,7 +28,7 @@ export default function PostsFeed({
   pageKey,
   limit = 10,
   q = "",
-  className = "main-container",
+  className = "",
   showExcerpt = true,
   showCover = true,
 }: Props) {
@@ -45,9 +39,9 @@ export default function PostsFeed({
   useEffect(() => {
     let alive = true;
     (async () => {
-      setLoading(true);
-      setErr(null);
       try {
+        setLoading(true);
+        setErr(null);
         const url = new URL(`${API}/api/public/posts`);
         url.searchParams.set("page", pageKey);
         url.searchParams.set("limit", String(limit));
@@ -68,74 +62,88 @@ export default function PostsFeed({
     };
   }, [pageKey, limit, q]);
 
-  if (loading) {
-    return <div className={`posts ${className}`}>Yükleniyor…</div>;
-  }
-  if (err) {
-    return <div className={`posts ${className}`}>Hata: {err}</div>;
-  }
-  if (items.length === 0) {
+  // 👇 reveal: .reveal -> .is-visible
+  useEffect(() => {
+    if (!items.length) return;
+    const els = Array.from(
+      document.querySelectorAll<HTMLElement>(".product-card.reveal")
+    );
+    if (!els.length) return;
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            (e.target as HTMLElement).classList.add("is-visible");
+            io.unobserve(e.target);
+          }
+        }
+      },
+      { root: null, rootMargin: "0px 0px -10% 0px", threshold: 0.1 }
+    );
+    els.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, [items.length]);
+
+  if (loading)
     return (
-      <div className={`posts ${className}`}>
+      <div className={`products-grid ${className}`} style={{ color: "#111" }}>
+        Yükleniyor…
+      </div>
+    );
+  if (err)
+    return (
+      <div className={`products-grid ${className}`} style={{ color: "#111" }}>
+        Hata: {err}
+      </div>
+    );
+  if (items.length === 0)
+    return (
+      <div className={`products-grid ${className}`} style={{ color: "#111" }}>
         Bu sayfada gösterilecek içerik yok.
       </div>
     );
-  }
 
   return (
-    <div className={`posts ${className}`}>
-      <div className="posts-grid">
-        {items.map((p) => (
-          <PostCard
+    <div className="main-container">
+      <div className={`products-grid ${className}`} data-reveal-group>
+        {items.map((p, i) => (
+          <article
             key={p.id}
-            post={p}
-            showCover={showCover}
-            showExcerpt={showExcerpt}
-          />
+            className="product-card reveal"
+            style={{ ["--i" as any]: i }}
+            data-reveal="up"
+          >
+            {showCover && p.cover_url ? (
+              <a
+                className="product-media"
+                href={`/post/${p.slug}`}
+                aria-label={p.title}
+              >
+                <img src={p.cover_url} alt={p.title} loading="lazy" />
+              </a>
+            ) : null}
+
+            <div className="product-content">
+              <h3 className="product-name">
+                <a className="product-name-link" href={`/post/${p.slug}`}>
+                  {p.title}
+                </a>
+              </h3>
+
+              {showExcerpt && p.excerpt ? (
+                <p className="product-desc">{p.excerpt}</p>
+              ) : null}
+
+              <div className="product-actions">
+                <a className="product-link" href={`/post/${p.slug}`}>
+                  Devamını oku <span className="product-link-icon">→</span>
+                </a>
+              </div>
+            </div>
+          </article>
         ))}
       </div>
     </div>
-  );
-}
-
-/* Alt kart bileşenini ayırdık */
-function PostCard({
-  post,
-  showCover = true,
-  showExcerpt = true,
-}: {
-  post: Post;
-  showCover?: boolean;
-  showExcerpt?: boolean;
-}) {
-  const date = post.published_at
-    ? new Date(post.published_at).toLocaleDateString()
-    : new Date(post.created_at).toLocaleDateString();
-
-  return (
-    <article className="post-card">
-      {showCover && post.cover_url ? (
-        <a className="post-cover-link" href={`/post/${post.slug}`}>
-          <img className="post-cover" src={post.cover_url} alt={post.title} />
-        </a>
-      ) : null}
-
-      <header className="post-head">
-        <a className="post-title" href={`/post/${post.slug}`}>
-          {post.title}
-        </a>
-        <div className="post-meta">{date}</div>
-      </header>
-
-      {showExcerpt && post.excerpt ? (
-        <p className="post-excerpt line-2">{post.excerpt}</p>
-      ) : null}
-
-      <div className="post-actions">
-        <a className="post-read" href={`/post/${post.slug}`}>
-          Devamını oku →
-        </a>
-      </div>
-    </article>
   );
 }
