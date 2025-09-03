@@ -1,10 +1,10 @@
 // src/pages/Home.tsx
 import Header from "../components/Header";
 import Main from "../components/Main";
-import Products from "../components/Products";
-import Projects from "../components/Projects";
+// import Products from "../components/Products";
+// import Projects from "../components/Projects";
+// import Services from "../components/Services";
 import Footer from "../components/Footer";
-import Services from "../components/Services";
 import "../App.css";
 
 import PostsFeed from "./posts/PostsFeed";
@@ -14,9 +14,9 @@ export default function Home() {
     <>
       <Header />
       <Main />
-      <Products />
+      {/* <Products />
       <Projects />
-      <Services />
+      <Services /> */}
       <PostsFeed pageKey="home" limit={6} showCover showExcerpt />
       <Footer />
     </>

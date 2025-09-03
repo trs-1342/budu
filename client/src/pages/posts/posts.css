@@ -81,14 +81,14 @@
   border-bottom-color: #fff;
 }
 
-.products-grid {
+.pproducts-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: clamp(1.2rem, 2.5vw, 2rem);
 }
 
 /* Kart */
-.product-card {
+.pproduct-card {
   background: #f3efe9; /* sıcak gri/bej vibe */
   border-radius: 22px;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
@@ -97,17 +97,17 @@
   display: grid;
   grid-template-rows: auto 1fr;
 }
-.product-card:hover {
+.pproduct-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.09);
 }
 
 /* Görsel kapsayıcı */
-.product-media {
+.pproduct-media {
   display: block;
   padding: clamp(10px, 1.4vw, 16px);
 }
-.product-media img {
+.pproduct-media img {
   width: 100%;
   height: clamp(220px, 30vw, 340px);
   object-fit: cover;
@@ -118,27 +118,27 @@
 }
 
 /* İçerik */
-.product-content {
+.pproduct-content {
   padding: clamp(1rem, 2.2vw, 1.5rem);
 }
 
-.product-name {
+.pproduct-name {
   margin: 0 0 0.6rem;
   font-size: clamp(21px, 2.6vw, 30px);
   line-height: 1.25;
   color: #111;
 }
-.product-name-link {
+.pproduct-name-link {
   color: inherit;
   text-decoration: underline;
   text-decoration-thickness: 2px;
   text-underline-offset: 4px;
 }
-.product-name-link:hover {
+.pproduct-name-link:hover {
   opacity: 0.9;
 }
 
-.product-desc {
+.pproduct-desc {
   margin: 0 0 1.1rem;
   color: #555;
   font-size: clamp(14px, 1.8vw, 17px);
@@ -146,11 +146,11 @@
 }
 
 /* Alt aksiyon */
-.product-actions {
+.pproduct-actions {
   display: flex;
   align-items: center;
 }
-.product-link {
+.pproduct-link {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -161,26 +161,26 @@
   border-radius: 10px;
   transition: background 0.15s ease, transform 0.15s ease;
 }
-.product-link:hover {
+.pproduct-link:hover {
   background: #eaeaea;
   transform: translateX(2px);
 }
-.product-link-icon {
+.pproduct-link-icon {
   font-size: 18px;
   line-height: 1;
 }
 
 /* Responsive */
 @media (max-width: 1024px) {
-  .products-grid {
+  .pproducts-grid {
     grid-template-columns: 1fr;
   }
-  .products-section {
+  .pproducts-section {
     margin: 3rem 8vw 5rem;
   }
 }
 
 /* reveal ile uyum (App.css'deki .reveal/.is-visible ile uyumlu) */
-.product-card.reveal {
+.pproduct-card.reveal {
   will-change: transform, opacity;
 }

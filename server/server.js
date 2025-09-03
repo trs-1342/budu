@@ -446,12 +446,10 @@ app.post("/api/admin/posts/save", requireAuth, async (req, res) => {
   } catch (e) {
     await conn.rollback();
     console.error(e);
-    return res
-      .status(e && e.code === "ER_DUP_ENTRY" ? 409 : 500)
-      .json({
-        error:
-          e && e.code === "ER_DUP_ENTRY" ? "Slug zaten var" : "Sunucu hatası",
-      });
+    return res.status(e && e.code === "ER_DUP_ENTRY" ? 409 : 500).json({
+      error:
+        e && e.code === "ER_DUP_ENTRY" ? "Slug zaten var" : "Sunucu hatası",
+    });
   } finally {
     conn.release();
   }

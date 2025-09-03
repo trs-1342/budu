@@ -1,4 +1,5 @@
 // src/pages/Handbook.tsx
+import PostsFeed from "./posts/PostsFeed";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import "../App.css";
@@ -371,7 +372,7 @@ function Handbook() {
           </div>
         </section>
       </div>
-
+      <PostsFeed pageKey="handbook" limit={6} showCover showExcerpt />
       <Footer />
     </>
   );

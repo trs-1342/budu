@@ -1,39 +1,78 @@
-@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap");
-
-.admin-scope .posts-wrap {
+.admin-scope .table {
   display: grid;
-  gap: 12px;
-  font-family: "JetBrains Mono", monospace;
-  font-size: 13px;
-}
-.admin-scope .posts-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-.admin-scope .tabs {
-  display: flex;
   gap: 6px;
 }
-.admin-scope .tab {
-  padding: 8px 10px;
+
+/* Başlık */
+.admin-scope .thead {
+  display: grid;
+  grid-template-columns: 1.4fr 0.6fr 0.7fr 0.6fr 0.7fr; /* kolon genişlikleri */
+  gap: 8px;
+  padding: 10px;
+  color: var(--muted);
+  font-size: 22px;
+  font-weight: 600;
+  background: #111;
   border: 1px solid var(--line);
-  border-radius: 10px;
-  background: #000;
-  color: #fff;
-  cursor: pointer;
-  font-size: 12px;
+  border-radius: 8px;
 }
-.admin-scope .tab.active {
+
+/* Satır */
+.admin-scope .tr {
+  display: grid;
+  grid-template-columns: 1.4fr 0.6fr 0.7fr 0.6fr 0.7fr;
+  gap: 8px;
+  align-items: center;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px;
+  margin-top: 10px;
+}
+
+.admin-scope .td.title .title-link {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  text-decoration: none;
+}
+
+.admin-scope .td .badge {
+  margin-right: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 2px 6px;
+  font-size: 11px;
+}
+
+.admin-scope .dim {
+  color: var(--muted);
+  margin-left: 6px;
+  font-size: 13px;
+}
+
+.admin-scope .line-1 {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Status */
+.admin-scope .status {
+  padding: 3px 6px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  font-size: 11px;
+}
+.admin-scope .status.published {
   background: #0b0b0b;
 }
-.admin-scope .actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.admin-scope .status.draft,
+.admin-scope .status.archived,
+.admin-scope .status.scheduled {
+  background: #0a0a0a;
 }
+
 .admin-scope .search {
   width: 280px;
   max-width: 45vw;
@@ -43,7 +82,9 @@
   background: #000;
   color: #fff;
   outline: none;
+  margin: 10px;
 }
+
 .admin-scope .btn {
   padding: 8px 10px;
   border: 1px solid var(--line);
@@ -62,6 +103,7 @@
 .admin-scope .btn.danger {
   border-color: #3a1a1a;
 }
+
 .admin-scope .alert {
   padding: 10px 12px;
   border: 1px solid var(--line);
@@ -78,71 +120,46 @@
   border-color: #5c1f1f;
   background: #1a0f0f;
 }
+
 .admin-scope .muted {
   color: var(--muted);
 }
 
-.admin-scope .table {
+.admin-scope .posts-wrap {
   display: grid;
-  gap: 6px;
-}
-.admin-scope .thead,
-.admin-scope .tr {
-  display: grid;
-  grid-template-columns: 1.4fr 0.6fr 0.7fr 0.6fr 0.7fr;
-  gap: 8px;
-  align-items: center;
-}
-.admin-scope .thead {
-  color: var(--muted);
-  font-size: 12px;
-  padding: 4px 6px;
-}
-.admin-scope .tbody {
-  display: grid;
-  gap: 6px;
-}
-.admin-scope .tr {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 10px;
-}
-.admin-scope .td.title .title-link {
-  color: #fff;
-}
-.admin-scope .td .badge {
-  margin-right: 6px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 2px 6px;
-  font-size: 11px;
-}
-.admin-scope .dim {
-  color: var(--muted);
-  margin-left: 6px;
-}
-.admin-scope .line-1 {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  gap: 12px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 13px;
 }
 
-.admin-scope .status {
-  padding: 3px 6px;
-  border-radius: 8px;
-  border: 1px solid var(--line);
-  font-size: 11px;
+.admin-scope .posts-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
 }
-.admin-scope .status.published {
+
+.admin-scope .tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.admin-scope .tab {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #000;
+  color: #fff;
+  cursor: pointer;
+  font-size: 12px;
+}
+.admin-scope .tab.active {
   background: #0b0b0b;
 }
-.admin-scope .status.draft {
-  background: #0a0a0a;
-}
-.admin-scope .status.archived {
-  background: #0a0a0a;
-}
-.admin-scope .status.scheduled {
-  background: #0a0a0a;
+
+.admin-scope .actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }

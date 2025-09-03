@@ -66,7 +66,7 @@ export default function PostsFeed({
   useEffect(() => {
     if (!items.length) return;
     const els = Array.from(
-      document.querySelectorAll<HTMLElement>(".product-card.reveal")
+      document.querySelectorAll<HTMLElement>(".pproduct-card.reveal")
     );
     if (!els.length) return;
 
@@ -87,36 +87,36 @@ export default function PostsFeed({
 
   if (loading)
     return (
-      <div className={`products-grid ${className}`} style={{ color: "#111" }}>
+      <div className={`pproducts-grid ${className}`} style={{ color: "#111" }}>
         Yükleniyor…
       </div>
     );
   if (err)
     return (
-      <div className={`products-grid ${className}`} style={{ color: "#111" }}>
+      <div className={`pproducts-grid ${className}`} style={{ color: "#111" }}>
         Hata: {err}
       </div>
     );
   if (items.length === 0)
     return (
-      <div className={`products-grid ${className}`} style={{ color: "#111" }}>
+      <div className={`pproducts-grid ${className}`} style={{ color: "#111" }}>
         Bu sayfada gösterilecek içerik yok.
       </div>
     );
 
   return (
     <div className="main-container">
-      <div className={`products-grid ${className}`} data-reveal-group>
+      <div className={`pproducts-grid ${className}`} data-reveal-group>
         {items.map((p, i) => (
           <article
             key={p.id}
-            className="product-card reveal"
+            className="pproduct-card reveal"
             style={{ ["--i" as any]: i }}
             data-reveal="up"
           >
             {showCover && p.cover_url ? (
               <a
-                className="product-media"
+                className="pproduct-media"
                 href={`/post/${p.slug}`}
                 aria-label={p.title}
               >
@@ -124,20 +124,20 @@ export default function PostsFeed({
               </a>
             ) : null}
 
-            <div className="product-content">
-              <h3 className="product-name">
-                <a className="product-name-link" href={`/post/${p.slug}`}>
+            <div className="pproduct-content">
+              <h3 className="pproduct-name">
+                <a className="pproduct-name-link" href={`/post/${p.slug}`}>
                   {p.title}
                 </a>
               </h3>
 
               {showExcerpt && p.excerpt ? (
-                <p className="product-desc">{p.excerpt}</p>
+                <p className="pproduct-desc">{p.excerpt}</p>
               ) : null}
 
-              <div className="product-actions">
-                <a className="product-link" href={`/post/${p.slug}`}>
-                  Devamını oku <span className="product-link-icon">→</span>
+              <div className="pproduct-actions">
+                <a className="pproduct-link" href={`/post/${p.slug}`}>
+                  Devamını oku <span className="pproduct-link-icon">→</span>
                 </a>
               </div>
             </div>

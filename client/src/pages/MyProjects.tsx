@@ -1,3 +1,4 @@
+import PostsFeed from "./posts/PostsFeed";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import "../css/Projects.css";
@@ -88,6 +89,7 @@ function MyProjects() {
           </div>
         </section>
       </div>
+      <PostsFeed pageKey="projects" limit={6} showCover showExcerpt />
       <Footer />
     </>
   );

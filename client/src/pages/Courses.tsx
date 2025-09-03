@@ -1,3 +1,4 @@
+import PostsFeed from "./posts/PostsFeed";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import "../css/Courses.css";
@@ -92,6 +93,7 @@ function Courses() {
           ))}
         </div>
       </section>
+      <PostsFeed pageKey="courses" limit={6} showCover showExcerpt />
       <Footer />
     </>
   );
