@@ -31,6 +31,9 @@ export default function Sidebar({ onLogout, username }: Props) {
         <NavLink to="/admin/posts" className="ad-link">
           <span>Postlar</span>
         </NavLink>
+        <NavLink to="/admin/gallery" className="ad-link">
+          <span>Galeri</span>
+        </NavLink>
       </nav>
 
       <div className="ad-user">

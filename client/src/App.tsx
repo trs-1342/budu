@@ -12,6 +12,7 @@ import NotFound from "./pages/NotFound";
 import MyProjects from "./pages/MyProjects";
 import Courses from "./pages/Courses";
 import MyProducts from "./pages/MyProducts";
+import PostDetail from "./pages/PostDetail";
 
 // ADMIN PAGES
 import AdminLogin from "./admin/pages/AdminLogin";
@@ -22,6 +23,7 @@ import Messages from "./admin/pages/Messages";
 import MessageDetail from "./admin/pages/MessageDetail.tsx";
 import Posts from "./admin/pages/Posts";
 import PostEditor from "./admin/pages/PostEditor";
+import Gallery from "./admin/pages/Gallery.tsx";
 
 import useRevealOnScroll from "./hooks/useRevealOnScroll";
 
@@ -49,6 +51,7 @@ function App() {
             <Route path="/my-projects" element={<MyProjects />} />
             <Route path="/courses" element={<Courses />} />
             <Route path="/my-products" element={<MyProducts />} />
+            <Route path="/post/:slug" element={<PostDetail />} />
             {/* admin routers */}
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route element={<RequireAuth />}>
@@ -60,6 +63,7 @@ function App() {
                 <Route path="/admin/posts" element={<Posts />} />
                 <Route path="/admin/posts/new" element={<PostEditor />} />
                 <Route path="/admin/posts/:id" element={<PostEditor />} />
+                <Route path="/admin/gallery" element={<Gallery />} />
               </Route>
             </Route>
             <Route path="*" element={<NotFound />} />

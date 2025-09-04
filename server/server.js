@@ -597,6 +597,42 @@ app.delete("/api/messages/:id", requireAuth, assertId, async (req, res) => {
   }
 });
 
+// server.js içinde uygun bir yere ekle
+app.get("/api/admin/gallery", requireAuth, async (req, res) => {
+  try {
+    const files = fs.readdirSync(UPLOAD_DIR);
+    const images = files
+      .filter((f) => /\.(jpe?g|png|gif|webp)$/i.test(f))
+      .map((f) => ({
+        name: f,
+        url: `${req.protocol}://${req.get("host")}/uploads/${f}`,
+      }));
+
+    res.json({ images });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Sunucu hatası" });
+  }
+});
+
+// Fotoğraf sil
+app.delete("/api/admin/gallery/:name", requireAuth, (req, res) => {
+  try {
+    const name = req.params.name;
+    const filePath = path.join(UPLOAD_DIR, name);
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: "Dosya bulunamadı" });
+    }
+
+    fs.unlinkSync(filePath);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Sunucu hatası" });
+  }
+});
+
 // 404
 app.use((_req, res) => res.status(404).json({ error: "Not Found" }));
 
