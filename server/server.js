@@ -1,4 +1,3 @@
-// server.js
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
@@ -118,6 +117,146 @@ app.use(
   })
 );
 
+// !
+// === Static root for courses (video) ===
+const COURSES_ROOT = path.join(__dirname, "courses");
+const COURSES_VIDEO_DIR = path.join(COURSES_ROOT, "video");
+
+fs.mkdirSync(COURSES_VIDEO_DIR, { recursive: true });
+
+// Videolar için statik servis (Range destekli). Örn: /courses/video/xxx.mp4
+app.use(
+  "/courses",
+  express.static(COURSES_ROOT, {
+    fallthrough: false,
+    // Cache ayarı: dosya adları benzersiz => uzun cache güvenli
+    maxAge: "30d",
+    setHeaders(res, filePath) {
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.setHeader("Cross-Origin-Resource-Policy", "same-site");
+      // video ise inline oynatılabilir
+      if (/\.(mp4|webm|mov|mkv)$/i.test(filePath)) {
+        res.setHeader("Content-Disposition", "inline");
+      }
+    },
+  })
+);
+
+// === helpers ===
+function slugify(s) {
+  return (
+    String(s || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .slice(0, 60) || "video"
+  );
+}
+
+function safeJoin(root, rel) {
+  // rel: "/courses/video/xxx.mp4" gibi bir url gelebilir
+  const cleaned = String(rel || "")
+    .replace(/^\/+courses\/+/i, "")
+    .replace(/^\/+/, "");
+  const abs = path.join(root, cleaned);
+  if (!abs.startsWith(root)) throw new Error("Path traversal engellendi");
+  return abs;
+}
+
+// Yalnızca belirli video tiplerine izin ver
+const ALLOWED_VIDEO = new Map([
+  ["video/mp4", ".mp4"],
+  ["video/webm", ".webm"],
+  ["video/quicktime", ".mov"],
+  ["video/x-matroska", ".mkv"],
+]);
+
+const MAX_VIDEO_MB = Number(process.env.MAX_VIDEO_MB || 1024); // 1 GB varsayılan
+
+// === multer storage ===
+const storageForVid = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, COURSES_VIDEO_DIR),
+  filename: (req, file, cb) => {
+    const ext = (path.extname(file.originalname) || "").toLowerCase();
+    const titleSlug = slugify(req.body?.title || file.originalname);
+    const rand = crypto.randomBytes(5).toString("hex");
+    cb(null, `${Date.now()}_${titleSlug}_${rand}${ext}`);
+  },
+});
+
+const uploadForVid = multer({
+  storageForVid,
+  limits: { fileSize: MAX_VIDEO_MB * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ok = ALLOWED_VIDEO.has(file.mimetype);
+    if (!ok) return cb(new Error("Yalnızca mp4/webm/mov/mkv kabul edilir."));
+    cb(null, true);
+  },
+});
+
+// küçük async wrapper
+const wrap = (fn) => (req, res, next) =>
+  Promise.resolve(fn(req, res, next)).catch(next);
+
+// opsiyonel: sadece admin izni
+// function ensureAdmin(req, res, next) {
+//   // requireAuth sonrası req.user varsa
+//   if (req.user && (req.user.role === "admin" || req.user.role === "editor"))
+//     return next();
+//   return res.status(403).json({ error: "Forbidden" });
+// }
+
+// --- Admin helper'ları ---
+function isTruthy(v) {
+  return v === true || v === 1 || v === "1" || v === "true";
+}
+
+function getIsAdmin(req) {
+  const u = req.user || {};
+  const byRole =
+    (u.role &&
+      (String(u.role).toLowerCase() === "admin" ||
+        String(u.role).toLowerCase() === "editor")) ||
+    isTruthy(u.is_admin);
+
+  // .env allowlist
+  const envList = String(process.env.ADMIN_EMAILS || "hattab1342@gmail.com")
+    .toLowerCase()
+    .split(/[,\s]+/)
+    .filter(Boolean);
+  const byEmail = u.email && envList.includes(String(u.email).toLowerCase());
+
+  // bazı projelerde oturumda rol tutuluyor
+  const bySession =
+    (req.session &&
+      (req.session.isAdmin === true ||
+        req.session.role === "admin" ||
+        req.session.role === "editor")) ||
+    false;
+
+  return Boolean(byRole || byEmail || bySession);
+}
+
+// GİRİŞ YAPAN HER KULLANICIYI "admin paneli için" yetkili say.
+// AdminLogin akışında req.session.admin (veya benzeri) set ediyorsan, o da kabul.
+// Ekstra .env ya da DB kolonuna gerek YOK.
+function ensureAdmin(req, res, next) {
+  // 1) Admin panel login'i session ile işaretliyse
+  if (req.session && (req.session.admin === true || req.session.adminUser)) {
+    return next();
+  }
+  // 2) Genel kullanıcı girişi yapılmışsa (requireAuth, JWT vs. req.user.id’i doldurur)
+  if (req.user && req.user.id) {
+    return next();
+  }
+  // 3) Aksi halde giriş yok: 401 dön (403 yerine 401 daha doğru)
+  return res.status(401).json({ error: "Unauthorized" });
+}
+
+// !
+
 const nanoid = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 16);
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
@@ -128,6 +267,7 @@ const storage = multer.diskStorage({
     cb(null, `${Date.now()}-${nanoid()}.${ext}`);
   },
 });
+
 const upload = multer({
   storage,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
@@ -135,6 +275,7 @@ const upload = multer({
 
 const UPLOAD_DIR = path.resolve(__dirname, "uploads");
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+
 app.use(
   "/uploads",
   express.static(UPLOAD_DIR, { maxAge: "365d", immutable: true })
@@ -774,6 +915,109 @@ app.get("/api/messages/stats", requireAuth, async (_req, res) => {
   }
 });
 
+app.get(
+  "/api/admin/courses",
+  requireAuth,
+  ensureAdmin,
+  wrap(async (req, res) => {
+    const [rows] = await db.query(
+      "SELECT id, title, detail, video_url, created_at FROM courses ORDER BY id DESC"
+    );
+    return res.json({ list: rows });
+  })
+);
+
+app.post(
+  "/api/admin/courses",
+  requireAuth,
+  ensureAdmin,
+  uploadForVid.single("video"),
+  wrap(async (req, res) => {
+    // alan kontrolleri
+    const title = String(req.body?.title || "").trim();
+    const detail = String(req.body?.detail || "").trim() || null;
+    if (!title) {
+      // yüklenen dosyayı çöpe at
+      if (req.file) fs.unlink(req.file.path, () => {});
+      return res.status(400).json({ error: "Başlık zorunlu" });
+    }
+    if (!req.file)
+      return res.status(400).json({ error: "Video dosyası zorunlu" });
+
+    // gerçekte kaydedilen uzantının izinli mimetype ile tutarlı olduğundan emin ol
+    const requiredExt = ALLOWED_VIDEO.get(req.file.mimetype);
+    if (
+      requiredExt &&
+      path.extname(req.file.filename).toLowerCase() !== requiredExt
+    ) {
+      // kullanıcı yanlış uzantılı dosya vermiş olabilir; ismi düzelterek yeniden adlandıralım
+      const fixed = req.file.filename.replace(/\.[^.]+$/, requiredExt);
+      const fixedAbs = path.join(COURSES_VIDEO_DIR, fixed);
+      fs.renameSync(req.file.path, fixedAbs);
+      req.file.filename = fixed;
+      req.file.path = fixedAbs;
+    }
+
+    const relUrl = `/courses/video/${req.file.filename}`;
+    try {
+      const [r] = await db.query(
+        "INSERT INTO courses (title, detail, video_url) VALUES (?, ?, ?)",
+        [title, detail, relUrl]
+      );
+      const [rows] = await db.query(
+        "SELECT id, title, detail, video_url, created_at FROM courses WHERE id = ?",
+        [r.insertId]
+      );
+      return res.status(201).json({ item: rows[0] });
+    } catch (e) {
+      // DB başarısızsa dosyayı geri al
+      fs.unlink(req.file.path, () => {});
+      throw e;
+    }
+  })
+);
+
+app.delete(
+  "/api/admin/courses/:id",
+  requireAuth,
+  ensureAdmin,
+  wrap(async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id))
+      return res.status(400).json({ error: "Geçersiz id" });
+
+    const conn = await db.getConnection(); // pool ise
+    try {
+      await conn.beginTransaction();
+
+      const [rows] = await conn.query(
+        "SELECT video_url FROM courses WHERE id = ? FOR UPDATE",
+        [id]
+      );
+      const item = rows[0];
+      await conn.query("DELETE FROM courses WHERE id = ?", [id]);
+
+      await conn.commit();
+
+      if (item?.video_url && item.video_url.startsWith("/courses/")) {
+        const abs = safeJoin(COURSES_ROOT, item.video_url);
+        fs.unlink(abs, () => {}); // var olmayabilir; hata yutuluyor
+      }
+
+      return res.json({ ok: true });
+    } catch (e) {
+      try {
+        await conn.rollback();
+      } catch {}
+      throw e;
+    } finally {
+      try {
+        conn.release();
+      } catch {}
+    }
+  })
+);
+
 app.get("/api/messages", requireAuth, async (req, res) => {
   try {
     const q = String(req.query.q || "").trim();
@@ -906,6 +1150,51 @@ app.delete("/api/admin/gallery/:name", requireAuth, (req, res) => {
     console.error(err);
     res.status(500).json({ error: "Sunucu hatası" });
   }
+});
+
+// genel hata yakalayıcı
+// app.use((err, req, res, next) => {
+//   console.error("[ERR]", err && (err.stack || err.message || err));
+//   if (res.headersSent) return next(err);
+//   const status = (err && (Number(err.statusCode) || Number(err.status))) || 500;
+//   res.status(status).json({ error: err.message || "Sunucu hatası" });
+// });
+
+// requireAuth ardından gelen ortak middleware (opsiyonel, ama faydalı)
+app.use((req, _res, next) => {
+  if (!req.user || !req.user.id) return next();
+  // Eğer email/role yoksa sadece o alanları doldur
+  if (
+    req.user.email &&
+    (req.user.role || typeof req.user.is_admin !== "undefined")
+  )
+    return next();
+  db.query("SELECT email, role, is_admin FROM users WHERE id = ? LIMIT 1", [
+    req.user.id,
+  ])
+    .then(([rows]) => {
+      if (rows && rows[0]) {
+        req.user.email = req.user.email || rows[0].email;
+        if (typeof req.user.is_admin === "undefined")
+          req.user.is_admin = rows[0].is_admin;
+        if (!req.user.role && rows[0].role) req.user.role = rows[0].role;
+      }
+      next();
+    })
+    .catch(() => next()); // sessiz geç: admin kontrolü zaten env ile de çalışır
+});
+
+app.get("/api/admin/_debug/whoami", (req, res) => {
+  res.json({
+    hasUser: !!(req.user && req.user.id),
+    user: req.user || null,
+    hasSession: !!req.session,
+    session: {
+      admin: req.session?.admin ?? null,
+      adminUser: !!req.session?.adminUser,
+      userId: req.session?.userId ?? null,
+    },
+  });
 });
 
 // 404
