@@ -1,7 +1,12 @@
 import "../css/Header.css";
 import buduLogo from "../assets/buduLogo.svg";
 
+function isAuthed() {
+  return !!localStorage.getItem("token");
+}
+
 function Header() {
+  const authed = isAuthed();
   return (
     <header className="App-header reveal reveal--center">
       <div>
@@ -10,6 +15,11 @@ function Header() {
             <button id="project-button"> هل لديك مشروع؟</button>
           </span>
           <ul>
+            <li>
+              <a href={authed ? "/account" : "/auth"}>
+                {authed ? "حسابي" : "تسجيل الدخول"}
+              </a>
+            </li>
             <li>
               <a href="/my-products">منتجاتي</a>
             </li>
@@ -36,5 +46,4 @@ function Header() {
     </header>
   );
 }
-
 export default Header;

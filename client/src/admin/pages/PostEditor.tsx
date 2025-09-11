@@ -270,7 +270,7 @@ export default function PostEditor() {
                   <input
                     type="checkbox"
                     checked={f.page_ids.includes(pg.id)}
-                    onChange={(e) => {
+                    onChange={() => {
                       setF((s) => {
                         const has = s.page_ids.includes(pg.id);
                         const page_ids = has

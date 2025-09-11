@@ -59,6 +59,35 @@ function requireAuth(req, res, next) {
   }
 }
 
+// Token üretimi (requireAuth ile aynı secret'ı kullanıyoruz)
+function signUserToken(payload) {
+  return jwt.sign(
+    { ...payload, aud: "user", scope: "user" },
+    JWT_ACCESS_SECRET,
+    {
+      expiresIn: ACCESS_TTL,
+    }
+  );
+}
+
+// req.user içindeki id alanı adı değişken olabilir; ikisini de dene
+function getAuthUserId(req) {
+  return req?.user?.sub ?? req?.user?.id ?? null;
+}
+
+// Telefon ülke kodunu çıkar
+function splitDialAndNumber(full) {
+  if (!full) return { dial: null, num: null };
+  const s = String(full).replace(/\s+/g, "");
+  if (s[0] !== "+") return { dial: null, num: s };
+  for (let len = 4; len >= 1; len--) {
+    const dial = s.slice(0, 1 + len).replace(/[^\+\d]/g, "");
+    const rest = s.slice(1 + len);
+    if (/^\+\d{1,4}$/.test(dial)) return { dial, num: rest };
+  }
+  return { dial: null, num: s.replace(/^\+/, "") };
+}
+
 // --- app ---
 const app = express();
 app.use(express.json());
@@ -124,7 +153,7 @@ app.post("/api/auth/login", async (req, res) => {
 
     const [rows] = await pool.query(
       "SELECT id, username, email, password, create_at FROM users WHERE username = ? OR email = ? LIMIT 1",
-      [emailOrUsername, emailOrUsername]
+      [emailOrUsername, emailOrUsername, password]
     );
 
     if (!rows.length) return res.status(401).json({ error: "Geçersiz kimlik" });
@@ -163,6 +192,252 @@ app.post("/api/auth/login", async (req, res) => {
     res.status(500).json({ error: "Sunucu hatası" });
   }
 });
+
+// ! USER LOGIN & REGISTER & ME
+app.post("/api/auth/user-login", async (req, res) => {
+  try {
+    const idf = req.body?.email || req.body?.emailOrUsername; // Auth.tsx her ikisini de gönderebilir
+    const { password } = req.body || {};
+    if (!idf || !password) return res.status(400).json({ error: "Eksik alan" });
+
+    const [rows] = await pool.query(
+      "SELECT id, username, email, password, phone, membership_notify FROM customers WHERE email=? OR username=? LIMIT 1",
+      [idf, idf]
+    );
+    if (!rows.length) return res.status(401).json({ error: "Geçersiz kimlik" });
+
+    const u = rows[0];
+    const ok = isBcrypt(u.password)
+      ? bcrypt.compareSync(password, u.password)
+      : password === u.password;
+    if (!ok) return res.status(401).json({ error: "Geçersiz kimlik" });
+
+    // Plain ise sessiz migrasyon
+    if (!isBcrypt(u.password)) {
+      const hash = bcrypt.hashSync(u.password, 10);
+      await pool.query("UPDATE customers SET password=? WHERE id=?", [
+        hash,
+        u.id,
+      ]);
+    }
+
+    const token = signUserToken({ sub: u.id, username: u.username });
+
+    res.cookie("refresh", token, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: false,
+      maxAge: ms(REFRESH_TTL),
+    });
+
+    res.json({
+      token,
+      user: {
+        id: u.id,
+        email: u.email,
+        username: u.username,
+        phone: u.phone || null,
+        membershipNotify: !!u.membership_notify,
+      },
+    });
+  } catch (e) {
+    console.error("user-login error:", e);
+    res.status(500).json({ error: "Sunucu hatası" });
+  }
+});
+
+app.post("/api/auth/register", async (req, res) => {
+  try {
+    let { email, username, password, phone } = req.body || {};
+    email = String(email || "")
+      .trim()
+      .toLowerCase();
+    username = String(username || "").trim();
+    password = String(password || "");
+
+    if (!email || !username || password.length < 6) {
+      return res.status(400).json({ error: "Eksik veya hatalı alan" });
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: "E-posta geçersiz" });
+    }
+
+    const [dupe] = await pool.query(
+      "SELECT id FROM customers WHERE email=? OR username=? LIMIT 1",
+      [email, username]
+    );
+    if (dupe.length) {
+      return res
+        .status(409)
+        .json({ error: "E-posta veya kullanıcı adı kullanılıyor" });
+    }
+
+    const hash = bcrypt.hashSync(password, 10);
+    const { dial } = splitDialAndNumber(phone);
+
+    const [ins] = await pool.query(
+      "INSERT INTO customers (username, email, password, phone, country_dial) VALUES (?,?,?,?,?)",
+      [username, email, hash, phone || null, dial || null]
+    );
+
+    const token = signUserToken({ sub: ins.insertId, username });
+    // İstersen refresh cookie; requireAuth sadece Bearer kullanıyorsa şart değil
+    res.cookie("refresh", token, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: false,
+      maxAge: ms(REFRESH_TTL),
+    });
+
+    res.status(201).json({
+      token,
+      user: { id: ins.insertId, email, username, phone: phone || null },
+    });
+  } catch (e) {
+    console.error("register error:", e);
+    res.status(500).json({ error: "Sunucu hatası" });
+  }
+});
+
+// Hesap: Me
+app.get("/api/account/user-me", requireAuth, async (req, res) => {
+  try {
+    const uid = getAuthUserId(req);
+    if (!uid) return res.status(401).json({ error: "Kimlik gerekli" });
+
+    const [rows] = await pool.query(
+      "SELECT id, email, username, phone, country_dial, membership_notify FROM customers WHERE id=? LIMIT 1",
+      [uid]
+    );
+    if (!rows.length)
+      return res.status(404).json({ error: "Kullanıcı bulunamadı" });
+
+    const u = rows[0];
+    res.json({
+      id: u.id,
+      email: u.email,
+      username: u.username,
+      phone: u.phone,
+      countryDial: u.country_dial,
+      membershipNotify: !!u.membership_notify,
+    });
+  } catch (e) {
+    console.error("user-me error:", e);
+    res.status(500).json({ error: "Sunucu hatası" });
+  }
+});
+
+// Hesap: Güncelle (şimdilik sadece telefon)
+app.patch("/api/account/user-update", requireAuth, async (req, res) => {
+  try {
+    const uid = getAuthUserId(req);
+    if (!uid) return res.status(401).json({ error: "Kimlik gerekli" });
+
+    const phone =
+      typeof req.body?.phone === "string" ? req.body.phone.trim() : null;
+    const membershipNotify =
+      typeof req.body?.membershipNotify === "boolean"
+        ? req.body.membershipNotify
+        : null;
+
+    const fields = [];
+    const values = [];
+
+    if (phone !== null) {
+      const { dial } = splitDialAndNumber(phone);
+      fields.push("phone = ?", "country_dial = ?");
+      values.push(phone || null, dial || null);
+    }
+    if (membershipNotify !== null) {
+      fields.push("membership_notify = ?");
+      values.push(membershipNotify ? 1 : 0);
+    }
+
+    if (!fields.length)
+      return res.status(400).json({ error: "Güncellenecek alan yok" });
+
+    values.push(uid);
+    const sql = `UPDATE customers SET ${fields.join(", ")} WHERE id=?`;
+    await pool.query(sql, values);
+
+    res.json({ ok: true });
+  } catch (e) {
+    console.error("user-update error:", e);
+    res.status(500).json({ error: "Sunucu hatası" });
+  }
+});
+
+// Hesap: Şifre değiştir
+app.post("/api/account/user-change-password", requireAuth, async (req, res) => {
+  try {
+    const uid = getAuthUserId(req);
+    if (!uid) return res.status(401).json({ error: "Kimlik gerekli" });
+
+    const { current_password, new_password } = req.body || {};
+    if (!current_password || !new_password || String(new_password).length < 6) {
+      return res.status(400).json({ error: "Geçersiz şifre" });
+    }
+
+    const [rows] = await pool.query(
+      "SELECT password FROM customers WHERE id=? LIMIT 1",
+      [uid]
+    );
+    if (!rows.length)
+      return res.status(404).json({ error: "Kullanıcı bulunamadı" });
+
+    const ok = isBcrypt(rows[0].password)
+      ? bcrypt.compareSync(current_password, rows[0].password)
+      : current_password === rows[0].password;
+
+    if (!ok) return res.status(401).json({ error: "Mevcut şifre yanlış" });
+
+    const hash = bcrypt.hashSync(String(new_password), 10);
+    await pool.query("UPDATE customers SET password=? WHERE id=?", [hash, uid]);
+
+    res.json({ ok: true });
+  } catch (e) {
+    console.error("user-change-password error:", e);
+    res.status(500).json({ error: "Sunucu hatası" });
+  }
+});
+
+app.post(
+  "/api/account/user-notify-membership",
+  requireAuth,
+  async (req, res) => {
+    try {
+      const uid = getAuthUserId(req);
+      if (!uid) return res.status(401).json({ error: "Kimlik gerekli" });
+
+      const notify = !!req.body?.notify;
+      await pool.query("UPDATE customers SET membership_notify=? WHERE id=?", [
+        notify ? 1 : 0,
+        uid,
+      ]);
+
+      res.json({ ok: true, notify });
+    } catch (e) {
+      console.error("user-notify-membership error:", e);
+      res.status(500).json({ error: "Sunucu hatası" });
+    }
+  }
+);
+
+app.delete("/api/account/user-delete", requireAuth, async (req, res) => {
+  try {
+    const uid = getAuthUserId(req);
+    if (!uid) return res.status(401).json({ error: "Kimlik gerekli" });
+
+    await pool.query("DELETE FROM customers WHERE id=?", [uid]);
+    res.clearCookie("refresh");
+    res.json({ ok: true });
+  } catch (e) {
+    console.error("user-delete error:", e);
+    res.status(500).json({ error: "Sunucu hatası" });
+  }
+});
+
+// ! REFRESH & LOGOUT & ME
 
 app.post("/api/auth/refresh", async (req, res) => {
   try {

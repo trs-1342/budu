@@ -99,9 +99,10 @@ export default function PostsFeed({
     );
   if (items.length === 0)
     return (
-      <div className={`pproducts-grid ${className}`} style={{ color: "#111" }}>
-        Bu sayfada gösterilecek içerik yok.
-      </div>
+      <div
+        className={`pproducts-grid ${className}`}
+        style={{ color: "#111" }}
+      ></div>
     );
 
   return (
