@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
+const { randomBytes } = require("node:crypto");
 const mysql = require("mysql2/promise");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -47,14 +48,113 @@ const verifyAccess = (t) => jwt.verify(t, JWT_ACCESS_SECRET);
 const verifyRefresh = (t) => jwt.verify(t, JWT_REFRESH_SECRET);
 
 // tiny auth mw
+// function requireAuth(req, res, next) {
+//   try {
+//     const token = req.headers.authorization?.split(" ")[1];
+//     if (!token) return res.status(401).json({ error: "Yetkisiz" });
+//     req.user = verifyAccess(token);
+//     next();
+//   } catch {
+//     return res.status(401).json({ error: "Yetkisiz" });
+//   }
+// }
+
+// function requireAuth(req, res, next) {
+//   // 0) Önceden set edildiyse geç
+//   if (req.user && req.user.id) return next();
+
+//   // 1) Authorization: Bearer <access>
+//   const bearer = req.headers.authorization?.startsWith("Bearer ")
+//     ? req.headers.authorization.slice(7)
+//     : null;
+
+//   // 2) Cookie access (isteğe bağlı isimler)
+//   const cookieAccess =
+//     req.cookies?.access ||
+//     req.cookies?.access_token ||
+//     req.cookies?.token ||
+//     null;
+
+//   let token = bearer || cookieAccess;
+
+//   // 3) Hiç access yoksa -> refresh ile yenile ve devam et
+//   if (!token && req.cookies?.refresh) {
+//     try {
+//       const r = verifyRefresh(req.cookies.refresh); // JWT_REFRESH_SECRET
+//       const fresh = signAccess({ sub: r.sub }); // JWT_ACCESS_SECRET
+//       // küçük bir httpOnly access cookie bırak (dev)
+//       res.cookie("access", fresh, {
+//         httpOnly: true,
+//         sameSite: "lax",
+//         secure: false,
+//         maxAge: ms(process.env.ACCESS_TTL || "10m"),
+//       });
+//       token = fresh;
+//     } catch (_) {
+//       return res.status(401).json({ error: "Unauthorized" });
+//     }
+//   }
+
+//   if (!token) return res.status(401).json({ error: "Unauthorized" });
+
+//   try {
+//     // *** KRİTİK: access doğrulaması her zaman JWT_ACCESS_SECRET ile ***
+//     const p = verifyAccess(token); // JWT_ACCESS_SECRET
+//     req.user = {
+//       id: p.sub,
+//       email: p.email,
+//       role: p.role,
+//       is_admin: p.is_admin,
+//     };
+//     return next();
+//   } catch {
+//     return res.status(401).json({ error: "Unauthorized" });
+//   }
+// }
+
 function requireAuth(req, res, next) {
+  if (req.user && req.user.id) return next();
+
+  const bearer = req.headers.authorization?.startsWith("Bearer ")
+    ? req.headers.authorization.slice(7)
+    : null;
+  const cookieAccess =
+    req.cookies?.access ||
+    req.cookies?.access_token ||
+    req.cookies?.token ||
+    null;
+
+  let token = bearer || cookieAccess;
+
+  if (!token && req.cookies?.refresh) {
+    try {
+      const r = verifyRefresh(req.cookies.refresh); // JWT_REFRESH_SECRET
+      const fresh = signAccess({ sub: r.sub }); // JWT_ACCESS_SECRET
+      res.cookie("access", fresh, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: false,
+        maxAge: ms(process.env.ACCESS_TTL || "10m"),
+      });
+      token = fresh;
+    } catch {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+  }
+
+  if (!token) return res.status(401).json({ error: "Unauthorized" });
+
   try {
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) return res.status(401).json({ error: "Yetkisiz" });
-    req.user = verifyAccess(token);
+    const p = verifyAccess(token); // *** sadece JWT_ACCESS_SECRET ***
+    req.user = {
+      id: p.sub,
+      email: p.email,
+      role: p.role,
+      is_admin: p.is_admin,
+    };
     next();
   } catch {
-    return res.status(401).json({ error: "Yetkisiz" });
+    return res.status(401).json({ error: "Unauthorized" });
   }
 }
 
@@ -87,8 +187,34 @@ function splitDialAndNumber(full) {
   return { dial: null, num: s.replace(/^\+/, "") };
 }
 
-// --- app ---
 const app = express();
+
+const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || "http://localhost:1001";
+
+app.use(
+  cors({
+    origin: FRONTEND_ORIGIN,
+    credentials: true,
+    methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+
+// ! ERROR: Express 5 + path-to-regexp v6
+// app.options("/.*/", cors({ origin: FRONTEND_ORIGIN, credentials: true }));
+
+app.use((req, res, next) => {
+  if (req.method === "OPTIONS") {
+    res.header("Access-Control-Allow-Origin", FRONTEND_ORIGIN);
+    res.header("Access-Control-Allow-Credentials", "true");
+    res.header("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    return res.sendStatus(204);
+  }
+  next();
+});
+
+// --- app ---
 app.use(express.json());
 app.use(cookieParser());
 
@@ -107,15 +233,15 @@ const allowlist = new Set([
   "http://127.0.0.1:1001",
 ]);
 
-app.use(
-  cors({
-    origin: (origin, cb) => {
-      if (!origin || [...allowlist].some((o) => o === origin)) cb(null, true);
-      else cb(null, false);
-    },
-    credentials: true,
-  })
-);
+// app.use(
+//   cors({
+//     origin: (origin, cb) => {
+//       if (!origin || [...allowlist].some((o) => o === origin)) cb(null, true);
+//       else cb(null, false);
+//     },
+//     credentials: true,
+//   })
+// );
 
 // !
 // === Static root for courses (video) ===
@@ -176,18 +302,28 @@ const ALLOWED_VIDEO = new Map([
 const MAX_VIDEO_MB = Number(process.env.MAX_VIDEO_MB || 1024); // 1 GB varsayılan
 
 // === multer storage ===
+// const storageForVid = multer.diskStorage({
+//   destination: (req, file, cb) => cb(null, COURSES_VIDEO_DIR),
+//   filename: (req, file, cb) => {
+//     const ext = (path.extname(file.originalname) || "").toLowerCase();
+//     const titleSlug = slugify(req.body?.title || file.originalname);
+//     const rand = crypto.randomBytes(5).toString("hex");
+//     cb(null, `${Date.now()}_${titleSlug}_${rand}${ext}`);
+//   },
+// });
+
 const storageForVid = multer.diskStorage({
   destination: (req, file, cb) => cb(null, COURSES_VIDEO_DIR),
   filename: (req, file, cb) => {
     const ext = (path.extname(file.originalname) || "").toLowerCase();
     const titleSlug = slugify(req.body?.title || file.originalname);
-    const rand = crypto.randomBytes(5).toString("hex");
+    const rand = randomBytes(5).toString("hex"); // <-- artık doğru
     cb(null, `${Date.now()}_${titleSlug}_${rand}${ext}`);
   },
 });
 
 const uploadForVid = multer({
-  storageForVid,
+  storage: storageForVid, // <-- DÜZELTİLDİ
   limits: { fileSize: MAX_VIDEO_MB * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const ok = ALLOWED_VIDEO.has(file.mimetype);
@@ -239,19 +375,8 @@ function getIsAdmin(req) {
   return Boolean(byRole || byEmail || bySession);
 }
 
-// GİRİŞ YAPAN HER KULLANICIYI "admin paneli için" yetkili say.
-// AdminLogin akışında req.session.admin (veya benzeri) set ediyorsan, o da kabul.
-// Ekstra .env ya da DB kolonuna gerek YOK.
 function ensureAdmin(req, res, next) {
-  // 1) Admin panel login'i session ile işaretliyse
-  if (req.session && (req.session.admin === true || req.session.adminUser)) {
-    return next();
-  }
-  // 2) Genel kullanıcı girişi yapılmışsa (requireAuth, JWT vs. req.user.id’i doldurur)
-  if (req.user && req.user.id) {
-    return next();
-  }
-  // 3) Aksi halde giriş yok: 401 dön (403 yerine 401 daha doğru)
+  if (req.user && req.user.id) return next();
   return res.status(401).json({ error: "Unauthorized" });
 }
 
@@ -915,42 +1040,41 @@ app.get("/api/messages/stats", requireAuth, async (_req, res) => {
   }
 });
 
+// GET /api/admin/courses
 app.get(
   "/api/admin/courses",
   requireAuth,
   ensureAdmin,
   wrap(async (req, res) => {
-    const [rows] = await db.query(
+    const [rows] = await pool.query(
       "SELECT id, title, detail, video_url, created_at FROM courses ORDER BY id DESC"
     );
     return res.json({ list: rows });
   })
 );
 
+// POST /api/admin/courses
 app.post(
   "/api/admin/courses",
   requireAuth,
   ensureAdmin,
   uploadForVid.single("video"),
   wrap(async (req, res) => {
-    // alan kontrolleri
     const title = String(req.body?.title || "").trim();
     const detail = String(req.body?.detail || "").trim() || null;
+
     if (!title) {
-      // yüklenen dosyayı çöpe at
       if (req.file) fs.unlink(req.file.path, () => {});
       return res.status(400).json({ error: "Başlık zorunlu" });
     }
     if (!req.file)
       return res.status(400).json({ error: "Video dosyası zorunlu" });
 
-    // gerçekte kaydedilen uzantının izinli mimetype ile tutarlı olduğundan emin ol
     const requiredExt = ALLOWED_VIDEO.get(req.file.mimetype);
     if (
       requiredExt &&
       path.extname(req.file.filename).toLowerCase() !== requiredExt
     ) {
-      // kullanıcı yanlış uzantılı dosya vermiş olabilir; ismi düzelterek yeniden adlandıralım
       const fixed = req.file.filename.replace(/\.[^.]+$/, requiredExt);
       const fixedAbs = path.join(COURSES_VIDEO_DIR, fixed);
       fs.renameSync(req.file.path, fixedAbs);
@@ -960,23 +1084,23 @@ app.post(
 
     const relUrl = `/courses/video/${req.file.filename}`;
     try {
-      const [r] = await db.query(
+      const [r] = await pool.query(
         "INSERT INTO courses (title, detail, video_url) VALUES (?, ?, ?)",
         [title, detail, relUrl]
       );
-      const [rows] = await db.query(
+      const [rows] = await pool.query(
         "SELECT id, title, detail, video_url, created_at FROM courses WHERE id = ?",
         [r.insertId]
       );
       return res.status(201).json({ item: rows[0] });
     } catch (e) {
-      // DB başarısızsa dosyayı geri al
       fs.unlink(req.file.path, () => {});
       throw e;
     }
   })
 );
 
+// DELETE /api/admin/courses/:id
 app.delete(
   "/api/admin/courses/:id",
   requireAuth,
@@ -986,7 +1110,7 @@ app.delete(
     if (!Number.isFinite(id))
       return res.status(400).json({ error: "Geçersiz id" });
 
-    const conn = await db.getConnection(); // pool ise
+    const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
 
@@ -1001,7 +1125,7 @@ app.delete(
 
       if (item?.video_url && item.video_url.startsWith("/courses/")) {
         const abs = safeJoin(COURSES_ROOT, item.video_url);
-        fs.unlink(abs, () => {}); // var olmayabilir; hata yutuluyor
+        fs.unlink(abs, () => {});
       }
 
       return res.json({ ok: true });
@@ -1184,17 +1308,48 @@ app.use((req, _res, next) => {
     .catch(() => next()); // sessiz geç: admin kontrolü zaten env ile de çalışır
 });
 
+// app.get("/api/admin/_debug/whoami", (req, res) => {
+//   res.json({
+//     hasUser: !!(req.user && req.user.id),
+//     user: req.user || null,
+//     hasSession: !!req.session,
+//     session: {
+//       admin: req.session?.admin ?? null,
+//       adminUser: !!req.session?.adminUser,
+//       userId: req.session?.userId ?? null,
+//     },
+//   });
+// });
+
 app.get("/api/admin/_debug/whoami", (req, res) => {
   res.json({
     hasUser: !!(req.user && req.user.id),
     user: req.user || null,
-    hasSession: !!req.session,
-    session: {
-      admin: req.session?.admin ?? null,
-      adminUser: !!req.session?.adminUser,
-      userId: req.session?.userId ?? null,
-    },
+    cookies: Object.keys(req.cookies || {}),
   });
+});
+
+app.use((req, _res, next) => {
+  if (!req.user || !req.user.id) return next();
+  if (
+    req.user.email &&
+    (req.user.role || typeof req.user.is_admin !== "undefined")
+  )
+    return next();
+  pool
+    .query("SELECT email, role, is_admin FROM users WHERE id = ? LIMIT 1", [
+      req.user.id,
+    ])
+    .then(([rows]) => {
+      if (rows && rows[0]) {
+        req.user.email = req.user.email || rows[0].email;
+        if (typeof req.user.is_admin === "undefined")
+          req.user.is_admin = rows[0].is_admin;
+        if (!req.user.role && rows[0].role) req.user.role = rows[0].role;
+      }
+      next();
+    })
+    .catch(() => next());
 });
 
 // 404

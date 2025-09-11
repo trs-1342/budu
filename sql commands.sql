@@ -190,3 +190,16 @@ CREATE TABLE IF NOT EXISTS customers (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 SELECT * FROM customers;
+
+-- 11) COURSES (video ders arşivi)
+CREATE TABLE IF NOT EXISTS courses (
+  id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  title      VARCHAR(255) NOT NULL,
+  detail     TEXT NULL,
+  video_url  VARCHAR(500) NOT NULL,     -- ör: /courses/video/1736631123_intro.mp4
+  created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_courses_created (created_at),
+  KEY idx_courses_title (title)
+) ENGINE=InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci;
