@@ -47,6 +47,9 @@ const signRefresh = (payload) =>
 const verifyAccess = (t) => jwt.verify(t, JWT_ACCESS_SECRET);
 const verifyRefresh = (t) => jwt.verify(t, JWT_REFRESH_SECRET);
 
+const COURSES_DIR = path.join(__dirname, "courses", "video");
+const JWT_SECRET = process.env.JWT_SECRET || "dev_secret";
+
 // tiny auth mw
 // function requireAuth(req, res, next) {
 //   try {
@@ -381,6 +384,33 @@ function ensureAdmin(req, res, next) {
 }
 
 // !
+
+function scanCoursesFS() {
+  if (!fs.existsSync(COURSES_DIR)) return [];
+  return fs
+    .readdirSync(COURSES_DIR)
+    .filter((name) =>
+      fs.existsSync(path.join(COURSES_DIR, name, "manifest.m3u8"))
+    )
+    .map((name, i) => ({
+      id: Number(name) || i + 1,
+      title: name,
+      detail: null,
+      created_at: new Date().toISOString(),
+    }));
+}
+
+function verifyPlayToken(req, res, next) {
+  try {
+    const t = req.query.token;
+    const p = jwt.verify(String(t || ""), JWT_SECRET);
+    if (!p || !p.uid) return res.status(401).end();
+    req.play = p;
+    next();
+  } catch {
+    return res.status(401).end();
+  }
+}
 
 const nanoid = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 16);
 const storage = multer.diskStorage({
@@ -1276,6 +1306,53 @@ app.delete("/api/admin/gallery/:name", requireAuth, (req, res) => {
   }
 });
 
+app.get("/api/courses", requireAuth, async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      "SELECT id, title, detail, video_url, created_at FROM courses ORDER BY id DESC"
+    );
+    res.json(rows);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "courses_list_fail" });
+  }
+});
+
+// --- GET /api/user-courses/:id
+app.get("/api/courses/:id", requireAuth, async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      "SELECT id, title, detail, video_url, created_at FROM courses WHERE id=? LIMIT 1",
+      [req.params.id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: "not_found" });
+    res.json(rows[0]);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "course_detail_fail" });
+  }
+});
+
+// --- GET /api/courses/:id/play  => { playback }
+app.get("/api/courses/:id/play", requireAuth, async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      "SELECT video_url FROM courses WHERE id=? LIMIT 1",
+      [req.params.id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: "not_found" });
+    const videoUrl = rows[0].video_url;
+
+    // DB’de /courses/video/... olarak tutuluyor
+    const playback = videoUrl.startsWith("http") ? videoUrl : `${videoUrl}`;
+
+    res.json({ playback });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "course_play_fail" });
+  }
+});
+
 // genel hata yakalayıcı
 // app.use((err, req, res, next) => {
 //   console.error("[ERR]", err && (err.stack || err.message || err));
@@ -1293,7 +1370,7 @@ app.use((req, _res, next) => {
     (req.user.role || typeof req.user.is_admin !== "undefined")
   )
     return next();
-  db.query("SELECT email, role, is_admin FROM users WHERE id = ? LIMIT 1", [
+  pool.query("SELECT email, role, is_admin FROM users WHERE id = ? LIMIT 1", [
     req.user.id,
   ])
     .then(([rows]) => {
@@ -1327,6 +1404,24 @@ app.get("/api/admin/_debug/whoami", (req, res) => {
     user: req.user || null,
     cookies: Object.keys(req.cookies || {}),
   });
+});
+
+app.get(
+  "/api/courses/:id/manifest.m3u8",
+  requireAuth,
+  verifyPlayToken,
+  (req, res) => {
+    const manifestFile = path.join(
+      COURSES_DIR,
+      String(req.params.id),
+      "manifest.m3u8"
+    );
+    res.sendFile(manifestFile);
+  }
+);
+app.get("/api/courses/:id/:seg", requireAuth, verifyPlayToken, (req, res) => {
+  const segFile = path.join(COURSES_DIR, String(req.params.id), req.params.seg);
+  res.sendFile(segFile);
 });
 
 app.use((req, _res, next) => {

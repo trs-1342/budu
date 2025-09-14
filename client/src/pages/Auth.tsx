@@ -347,11 +347,11 @@ export default function Auth() {
     try {
       if (!validEmail(email))
         throw new Error("Lütfen geçerli bir e-posta girin.");
-      if (password.length < 6)
-        throw new Error("Şifre en az 6 karakter olmalı.");
+      if (password.length < 8)
+        throw new Error("Şifre en az 8 karakter olmalı.");
 
       if (mode === "login") {
-        const res = await api<LoginRes>("/api/auth/login", {
+        const res = await api<LoginRes>("/api/auth/user-login", {
           method: "POST",
           body: { email, password },
         });
@@ -368,7 +368,7 @@ export default function Auth() {
         ? `${country.dial}${phoneRaw.replace(/\D/g, "")}`
         : undefined;
 
-      const res = await api<RegisterRes>("/api/auth/register", {
+      const res = await api<RegisterRes>("/api/auth/user-register", {
         method: "POST",
         body: { email, username, password, phone: fullPhone },
       });

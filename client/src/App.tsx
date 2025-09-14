@@ -11,6 +11,7 @@ import Handbook from "./pages/Handbook";
 import NotFound from "./pages/NotFound";
 import MyProjects from "./pages/MyProjects";
 import Courses from "./pages/Courses";
+import CoursesWatch from "./pages/CoursesWatch";
 import MyProducts from "./pages/MyProducts";
 import PostDetail from "./pages/PostDetail";
 import Auth from "./pages/Auth";
@@ -55,6 +56,7 @@ function App() {
             <Route path="/handbook" element={<Handbook />} />
             <Route path="/my-projects" element={<MyProjects />} />
             <Route path="/courses" element={<Courses />} />
+            <Route path="/courses/watch/:id" element={<CoursesWatch />} />
             <Route path="/my-products" element={<MyProducts />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/account" element={<AccountSettings />} />
