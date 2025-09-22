@@ -19,14 +19,10 @@ function Main() {
             src={buduPhoto}
             alt="Profil fotoğrafı"
             className="reveal reveal--left"
-            /* istersen sadece bu görsele özel hız/mesafe:
-       style={{ "--reveal-distance":"28px", "--reveal-duration":".6s" } as React.CSSProperties}
-    */
           />
           <span className="status-badge reveal reveal--up">نشط بالعمل</span>
         </section>
 
-        {/* SAĞ TARAF – Başlık, metin, butonlar */}
         <section className="right-section reveal reveal--right">
           <h2 className="title">بشرى</h2>
           <p className="subtitle">

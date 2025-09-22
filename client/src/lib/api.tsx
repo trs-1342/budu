@@ -43,3 +43,87 @@ export async function api<T = any>(
 
   return data as T;
 }
+
+
+// src/lib/api.tsx
+export type ApiError = { error?: string };
+
+// export async function api<T = any>(
+//   path: string,
+//   init: RequestInit = {}
+// ): Promise<T> {
+//   const res = await fetch(path, {
+//     credentials: "include", // çerezleri gönder
+//     headers: {
+//       "Content-Type": "application/json",
+//       ...(init.headers || {}),
+//     },
+//     ...init,
+//   });
+
+//   // JSON olmayan yanıtlar için de deneyelim
+//   const tryJson = async () => {
+//     try { return await res.json(); } catch { return {}; }
+//   };
+
+//   if (!res.ok) {
+//     const j = (await tryJson()) as ApiError;
+//     throw new Error(j?.error || res.statusText);
+//   }
+//   return (await tryJson()) as T;
+// }
+
+// Kısa yol helpers
+export const AuthApi = {
+  register(body: { email: string; username: string; password: string }) {
+    return api("/api/auth/user-register", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+  login(body: { email?: string; username?: string; password: string }) {
+    return api("/api/auth/user-login", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+  logout() {
+    return api("/api/auth/logout", { method: "POST" });
+  },
+};
+
+export type MeDto = {
+  id: number;
+  email: string;
+  username: string;
+  phone?: string | null;
+  countryDial?: string | null;
+  membershipNotify: boolean;
+};
+
+export const AccountApi = {
+  me() {
+    return api<MeDto>("/api/account/user-me");
+  },
+  update(body: { username?: string; phone?: string; countryDial?: string }) {
+    return api("/api/account/user-update", {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    });
+  },
+  changePassword(body: { currentPassword: string; newPassword: string }) {
+    return api("/api/account/user-change-password", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+  notifyMembership(allow: boolean) {
+    return api("/api/account/user-notify-membership", {
+      method: "POST",
+      body: JSON.stringify({ allow }),
+    });
+  },
+  delete() {
+    return api("/api/account/user-delete", { method: "DELETE" });
+  },
+};

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import "../css/Courses.css";
+import PostsFeed from "./posts/PostsFeed";
 import { api } from "../lib/api";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:1002";
@@ -19,8 +20,6 @@ export default function Courses() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
-  // const [toOrone, setVideoCards] = useState(courses.length % 2 == 0);
-
   useEffect(() => {
     let live = true;
     (async () => {
@@ -94,7 +93,6 @@ export default function Courses() {
                   <div className="course-media">
                     {isHls(src) ? (
                       <div className="hls-placeholder">
-                        <span>HLS içerik</span>
                         <Link
                           className="watch-btn"
                           to={`/courses/watch/${c.id}`}
@@ -114,9 +112,6 @@ export default function Courses() {
                   </div>
 
                   {/* video içeriği = video_url, açıklama = detail */}
-                  <p className="course-desc">
-                    <strong>İçerik:</strong> {c.video_url}
-                  </p>
                   {c.detail && <p className="course-desc">{c.detail}</p>}
 
                   <footer className="course-actions">
@@ -134,6 +129,7 @@ export default function Courses() {
           </div>
         )}
       </main>
+      <PostsFeed pageKey="courses" showCover showExcerpt />
       <Footer />
     </>
   );

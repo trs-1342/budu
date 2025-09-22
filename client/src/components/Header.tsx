@@ -16,7 +16,7 @@ function Header() {
           </span>
           <ul>
             <li>
-              <a href={authed ? "/account" : "/auth"}>
+              <a href={authed ? "/account" : "/login"}>
                 {authed ? "حسابي" : "تسجيل الدخول"}
               </a>
             </li>
@@ -47,3 +47,56 @@ function Header() {
   );
 }
 export default Header;
+
+// import { Link, NavLink } from "react-router-dom";
+// import "../css/Header.css";
+
+// export default function Header() {
+//   const auth = true;
+//   return (
+//     <header className="site-header">
+//       <div className="container row">
+//         <Link to="/" className="brand">
+//           BUDU
+//         </Link>
+//         <nav className="nav">
+//           <NavLink to={auth ? "/account" : "/login"}>
+//             {auth ? "حسابي" : "تسجيل الدخول"}
+//           </NavLink>
+//           <NavLink
+//             to="/my-products"
+//             end
+//             className={({ isActive }) => (isActive ? "active" : "") + " "}
+//           >
+//             منتجاتي
+//           </NavLink>
+//           <NavLink
+//             to="/courses"
+//             end
+//             className={({ isActive }) => (isActive ? "active" : "") + " "}
+//           >
+//             الدورات
+//           </NavLink>
+//           <NavLink
+//             to="/my-projects"
+//             className={({ isActive }) => (isActive ? "active" : "") + " "}
+//           >
+//             مشاريعي
+//           </NavLink>
+//           <NavLink
+//             to="/handbook"
+//             className={({ isActive }) => (isActive ? "active" : "") + " "}
+//           >
+//             منهجية العمل
+//           </NavLink>
+//           <NavLink
+//             to="/"
+//             className={({ isActive }) => (isActive ? "active" : "") + " "}
+//           >
+//             الصفحة الرئيسية
+//           </NavLink>
+//         </nav>
+//       </div>
+//     </header>
+//   );
+// }

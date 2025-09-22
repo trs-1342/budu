@@ -93,8 +93,11 @@ export default function PostsFeed({
     );
   if (err)
     return (
-      <div className={`pproducts-grid ${className}`} style={{ color: "#111" }}>
-        Hata: {err}
+      <div
+        className={`main-container pproducts-grid ${className}`}
+        style={{ color: "#111", fontFamily: "serif" }}
+      >
+        Postlar yüklenemedi, Hata: {err}
       </div>
     );
   if (items.length === 0)

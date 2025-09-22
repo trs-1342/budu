@@ -1,0 +1,155 @@
+/* Register.css */
+.auth-wrap {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #0b0b0c;
+}
+.auth-card {
+  width: 100%;
+  max-width: 560px;
+  background: #121216;
+  border: 1px solid #1f1f26;
+  border-radius: 16px;
+  padding: 20px 18px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  display: grid;
+  gap: 14px;
+}
+.auth-title {
+  margin: 0 0 4px;
+  font: 700 22px/1.2 ui-sans-serif, system-ui;
+  color: #fff;
+  letter-spacing: 0.1px;
+}
+.auth-field {
+  display: grid;
+  gap: 6px;
+}
+.auth-field > span {
+  color: #b6b6c2;
+  font: 600 12px/1 ui-sans-serif, system-ui;
+}
+.auth-input {
+  background: #0f0f13;
+  border: 1px solid #2a2a35;
+  border-radius: 10px;
+  padding: 12px 13px;
+  color: #f3f3f7;
+  font: 500 14px/1.2 ui-sans-serif, system-ui;
+  outline: none;
+}
+.auth-input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+.auth-btn {
+  margin-top: 6px;
+  border: none;
+  border-radius: 12px;
+  padding: 11px 14px;
+  cursor: pointer;
+  font: 700 14px/1 ui-sans-serif, system-ui;
+}
+.auth-btn.primary {
+  background: #6366f1;
+  color: #fff;
+}
+.auth-btn.primary:hover {
+  filter: brightness(1.05);
+}
+.auth-row, .homepage-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #b6b6c2;
+  font: 500 13px/1 ui-sans-serif, system-ui;
+}
+.auth-row.between, .homepage-row.between {
+  justify-content: space-between;
+}
+.auth-link, .homepage-link {
+  color: #60a5fa;
+  text-decoration: none;
+}
+.auth-link:hover, .homepage-link {
+  text-decoration: underline;
+}
+.auth-error {
+  color: #fca5a5;
+  background: #2a1313;
+  border: 1px solid #7f1d1d;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font: 600 13px/1.2 ui-sans-serif, system-ui;
+}
+.auth-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  user-select: none;
+}
+
+/*  */
+
+/* Register.css — mevcut stillerinin altına ekle */
+
+.phone-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto 1fr; /* select | +90 | input */
+  gap: 8px;
+  align-items: center;
+}
+
+.dial-select {
+  appearance: none;
+  background: #0f0f13;
+  border: 1px solid #2a2a35;
+  border-radius: 10px;
+  padding: 12px 12px;
+  color: #f3f3f7;
+  font: 500 14px/1.2 ui-sans-serif, system-ui;
+  outline: none;
+}
+.dial-select:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+.dial-prefix {
+  padding: 12px 10px;
+  border: 1px solid #2a2a35;
+  border-radius: 10px;
+  background: #101015;
+  color: #cfd3dd;
+  font: 600 13px/1 ui-sans-serif, system-ui;
+  min-width: 64px;
+  text-align: center;
+}
+
+.phone-input {
+  width: 100%;
+}
+
+/* Register.css’e ekle */
+
+.name-row {
+  display: grid;
+  gap: 8px;
+}
+@media (min-width: 520px) {
+  .name-row {
+    grid-template-columns: 1fr 1fr; /* Ad | Soyad */
+  }
+}
+
+/* (Daha önce verdiğim telefon alanı stilleri aynı kalıyor) */
+
+.card-footer {
+  display: flex;
+}
+
+.card-footer .homepage-row{
+  margin-left: 50px;
+}

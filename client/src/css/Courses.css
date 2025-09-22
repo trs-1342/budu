@@ -1,6 +1,22 @@
-/* === Bölüm başlığı === */
+/* =========================
+   COURSES — TAM CSS
+   ========================= */
+
+/* Ortak container: menü ve footer ile aynı hizaya getir */
+.courses-section,
+.courses-wrap,
+.watch-wrap {
+  max-width: 1200px;
+  padding-left: 24px;
+  padding-right: 24px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Başlık alanı */
 .courses-section {
-  margin: 4rem 15vw 1.5rem;
+  margin-top: 3.5rem;
+  margin-bottom: 1.25rem;
   font-family: "MassiraPen", ui-sans-serif, system-ui;
 }
 .courses-header {
@@ -17,29 +33,32 @@
   color: #5b5b5b;
   font-size: clamp(14px, 1.8vw, 18px);
 }
-
-/* === İç sarmalayıcı === */
-.courses-wrap,
-.watch-wrap {
-  margin: 0 15vw 6rem;
+.muted {
+  color: #666;
 }
 
-/* === Grid === */
+.courses-wrap {
+  margin-bottom: 5.5rem;
+}
+.watch-wrap {
+  margin-bottom: 5.5rem;
+}
+
+/* Grid: iki sütun; tek sayıda ise ilk kart geniş */
 .courses-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: clamp(1.2rem, 2.5vw, 2rem);
   align-items: start;
 }
-
-/* Tek/tek sayıda ise ilk kart geniş */
 .courses-grid.odd .course-card:first-child {
   grid-column: 1 / -1;
 }
 
-/* === Kart === */
+/* Kart */
 .course-card {
   box-sizing: border-box;
+  width: 100%;
   background: #f6f6f6;
   border-radius: 22px;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
@@ -48,18 +67,21 @@
   grid-template-rows: auto auto 1fr auto;
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
+.course-card * {
+  box-sizing: border-box;
+}
 .course-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.09);
 }
 
-/* Başlık satırı */
+/* Kart başı: başlık tek satır + ellipsis */
 .course-head {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto minmax(0, 1fr) auto; /* ellipsis için kritik */
   align-items: center;
   gap: 0.75rem 1rem;
-  padding: 1rem 1.2rem 0.4rem;
+  padding: 0.8rem 1rem 0; /* iç boşluk sıkılaştırıldı */
 }
 .course-chip {
   background: #111;
@@ -75,6 +97,10 @@
   font-weight: 800;
   letter-spacing: -0.01em;
   color: #111;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 .course-title a {
   color: inherit;
@@ -89,28 +115,32 @@
   font-size: 0.9rem;
 }
 
-/* Medya alanı */
+/* Medya alanı: video kartı düzgün doldursun */
 .course-media {
-  padding: 0.6rem 1.2rem 0;
+  padding: 0.5rem 1rem 0; /* sağ/sol boşluklar azaltıldı */
+  overflow: hidden;
 }
-.course-video,
-.video-shell > video {
+
+/* Liste sayfasındaki <video> */
+.course-video {
   display: block;
   width: 100%;
-  aspect-ratio: 16/9; /* sabit oran → taşma biter */
-  max-height: 520px;
+  aspect-ratio: 16/9;
+  height: auto;
+  /* İçerik oranı farklıysa taşmalar siyah alan bırakmasın */
+  object-fit: cover; /* alanı doldur, gerekirse kırp */
   background: #000;
   border-radius: 14px;
   border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
-/* HLS yer tutucu (listeyi hafiflet) */
+/* HLS yer tutucu (listeyi hafifletmek için) */
 .hls-placeholder {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1rem 1.2rem;
+  padding: 1rem;
   background: #111;
   color: #fff;
   border-radius: 14px;
@@ -125,9 +155,9 @@
   border-radius: 10px;
 }
 
-/* Açıklama + alt aksiyon */
+/* Metinler ve aksiyonlar */
 .course-desc {
-  margin: 0.9rem 1.2rem 1.1rem;
+  margin: 0.8rem 1rem 1rem;
   color: #444;
   line-height: 1.65;
 }
@@ -135,7 +165,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  padding: 0 1.2rem 1.2rem;
+  padding: 0 1rem 1rem;
 }
 .watch-link {
   display: inline-flex;
@@ -152,7 +182,7 @@
   transform: translateX(2px);
 }
 
-/* === İzleme sayfası kartı === */
+/* İzleme sayfası kartı */
 .watch-card {
   background: #f6f6f6;
   border-radius: 22px;
@@ -164,19 +194,45 @@
   margin: 1rem 0 0;
 }
 
-/* === Responsive === */
-@media (max-width: 1100px) {
-  .courses-section {
-    margin: 3rem 8vw 1rem;
-  }
+/* VideoPlayer içindeki <video> (watch sayfası) */
+.video-shell > video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16/9; /* tutarlılık */
+  height: auto;
+  object-fit: cover; /* boş kenar kalmasın */
+  background: #000;
+  border-radius: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .courses-section,
   .courses-wrap,
   .watch-wrap {
-    margin: 0 8vw 5rem;
+    max-width: 1000px;
+  }
+}
+@media (max-width: 1100px) {
+  .courses-section,
+  .courses-wrap,
+  .watch-wrap {
+    max-width: 860px;
   }
   .courses-grid {
     grid-template-columns: 1fr;
   }
   .courses-grid.odd .course-card:first-child {
     grid-column: auto;
+  }
+}
+@media (max-width: 720px) {
+  .courses-section,
+  .courses-wrap,
+  .watch-wrap {
+    max-width: 640px;
+    padding-left: 16px;
+    padding-right: 16px;
   }
 }

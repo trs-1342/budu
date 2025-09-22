@@ -6,7 +6,9 @@
   display: flex; /* desktopta yan yana */
   gap: clamp(2rem, 4vw, 6rem);
   align-items: center;
-  font-family: "MassiraPen" !important;
+  font-family: "MassiraPen", sans-serif !important;
+  /* font-weight: normal;
+  font-style: normal; */
 }
 
 /* Sol taraf (fotoğraf + durum) */
@@ -32,6 +34,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  font-family: "MassiraPen";
   font-size: 22px;
   background: #fff;
   color: #16a34a;
@@ -53,6 +56,7 @@
   flex: 1;
   direction: rtl;
   text-align: right;
+  font-family: "MassiraPen";
 }
 
 .title {

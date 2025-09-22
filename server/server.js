@@ -492,20 +492,30 @@ app.post("/api/auth/login", async (req, res) => {
 // ! USER LOGIN & REGISTER & ME
 app.post("/api/auth/user-login", async (req, res) => {
   try {
-    const idf = req.body?.email || req.body?.emailOrUsername; // Auth.tsx her ikisini de gönderebilir
+    const idf =
+      req.body?.emailOrUsername || req.body?.email || req.body?.username; // EKLENDİ: username fallback
     const { password } = req.body || {};
-    if (!idf || !password) return res.status(400).json({ error: "Eksik alan" });
+
+    if (!idf || !password) {
+      return res.status(400).json({ error: "Eksik alan" });
+    }
 
     const [rows] = await pool.query(
-      "SELECT id, username, email, password, phone, membership_notify FROM customers WHERE email=? OR username=? LIMIT 1",
+      `SELECT id, username, email, password, phone, country_dial, membership_notify
+         FROM customers
+        WHERE email = ? OR username = ?
+        LIMIT 1`,
       [idf, idf]
     );
-    if (!rows.length) return res.status(401).json({ error: "Geçersiz kimlik" });
+    if (!rows.length) {
+      return res.status(401).json({ error: "Geçersiz kimlik" });
+    }
 
     const u = rows[0];
     const ok = isBcrypt(u.password)
       ? bcrypt.compareSync(password, u.password)
       : password === u.password;
+
     if (!ok) return res.status(401).json({ error: "Geçersiz kimlik" });
 
     // Plain ise sessiz migrasyon
@@ -517,8 +527,8 @@ app.post("/api/auth/user-login", async (req, res) => {
       ]);
     }
 
+    // refresh cookie (senin kodunla uyumlu)
     const token = signUserToken({ sub: u.id, username: u.username });
-
     res.cookie("refresh", token, {
       httpOnly: true,
       sameSite: "lax",
@@ -533,6 +543,7 @@ app.post("/api/auth/user-login", async (req, res) => {
         email: u.email,
         username: u.username,
         phone: u.phone || null,
+        countryDial: u.country_dial || null,
         membershipNotify: !!u.membership_notify,
       },
     });
@@ -541,6 +552,83 @@ app.post("/api/auth/user-login", async (req, res) => {
     res.status(500).json({ error: "Sunucu hatası" });
   }
 });
+
+app.post("/api/auth/user-register", registerHandler);
+
+async function registerHandler(req, res) {
+  try {
+    const {
+      email,
+      username,
+      password,
+      fname = null,
+      sname = null,
+      phone: rawPhone = null, // E.164 bekliyoruz (+90...)
+      countryDial = null, // "+90"
+    } = req.body || {};
+
+    if (!email || !username || !password) {
+      return res.status(400).json({ error: "Eksik alan" });
+    }
+
+    // benzersiz mi?
+    const [dup] = await pool.execute(
+      "SELECT id FROM customers WHERE email = ? OR username = ? LIMIT 1",
+      [email, username]
+    );
+    if (dup.length) {
+      return res.status(409).json({ error: "Kullanıcı zaten var" });
+    }
+
+    // phone temizliği (E.164 onayı; + ve rakamlar)
+    let phone = rawPhone;
+    if (phone) {
+      const cleaned = String(phone).replace(/[^\d+]/g, "");
+      if (!/^\+\d{5,15}$/.test(cleaned)) {
+        return res.status(400).json({ error: "Geçersiz telefon" });
+      }
+      phone = cleaned;
+    }
+
+    const hashed = await bcrypt.hash(password, 10);
+
+    const [ins] = await pool.execute(
+      `INSERT INTO customers
+        (username, email, password, fname, sname, full_name, phone, country_dial, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, CONCAT(COALESCE(?,''),' ',COALESCE(?,'')), ?, ?, NOW(), NOW())`,
+      [username, email, hashed, fname, sname, fname, sname, phone, countryDial]
+    );
+
+    const userId = ins.insertId;
+
+    // Kayıt sonrası otomatik login (access + refresh)
+    const access = signAccess({
+      sub: userId,
+      email,
+      role: "user",
+      is_admin: 0,
+    });
+    const refresh = signRefresh({ sub: userId });
+
+    res.cookie("access", access, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: false,
+      maxAge: ms(ACCESS_TTL),
+    });
+    res.cookie("refresh", refresh, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: false,
+      maxAge: ms(REFRESH_TTL),
+    });
+
+    return res.status(201).json({ ok: true, id: userId });
+  } catch (e) {
+    console.error("register error", e);
+    return res.status(500).json({ error: "Sunucu hatası" });
+  }
+}
 
 app.post("/api/auth/register", async (req, res) => {
   try {
@@ -601,8 +689,9 @@ app.get("/api/account/user-me", requireAuth, async (req, res) => {
     const uid = getAuthUserId(req);
     if (!uid) return res.status(401).json({ error: "Kimlik gerekli" });
 
-    const [rows] = await pool.query(
-      "SELECT id, email, username, phone, country_dial, membership_notify FROM customers WHERE id=? LIMIT 1",
+    const [rows] = await pool.execute(
+      `SELECT id, email, username, phone, country_dial, membership_notify
+       FROM customers WHERE id = ? LIMIT 1`,
       [uid]
     );
     if (!rows.length)
@@ -1370,9 +1459,10 @@ app.use((req, _res, next) => {
     (req.user.role || typeof req.user.is_admin !== "undefined")
   )
     return next();
-  pool.query("SELECT email, role, is_admin FROM users WHERE id = ? LIMIT 1", [
-    req.user.id,
-  ])
+  pool
+    .query("SELECT email, role, is_admin FROM users WHERE id = ? LIMIT 1", [
+      req.user.id,
+    ])
     .then(([rows]) => {
       if (rows && rows[0]) {
         req.user.email = req.user.email || rows[0].email;
@@ -1445,6 +1535,11 @@ app.use((req, _res, next) => {
       next();
     })
     .catch(() => next());
+});
+
+// Regular expression ile
+app.get(/^\/courses\/video\//, (req, res) => {
+  res.status(404).json({ error: "nonononon" });
 });
 
 // 404
