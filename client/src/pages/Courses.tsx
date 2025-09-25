@@ -66,7 +66,7 @@ export default function Courses() {
         {authed === false && !loading && (
           <div className="locked">
             <h2>Giriş yapın</h2>
-            <a className="btn-login" href="/auth">
+            <a className="btn-login" href="/login">
               Giriş / Kayıt
             </a>
           </div>
