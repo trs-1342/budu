@@ -1,44 +1,72 @@
+// src/components/Header.tsx
+import { useAuth } from "../lib/auth-context";
 import "../css/Header.css";
 import buduLogo from "../assets/buduLogo.svg";
 
-function isAuthed() {
-  return !!localStorage.getItem("token");
-}
+export default function Header() {
+  const { user, ready, logout } = useAuth();
 
-function Header() {
-  const authed = isAuthed();
+  async function handleLogout(e: React.MouseEvent) {
+    e.preventDefault();
+    await logout();
+    window.location.href = "/login";
+  }
+
   return (
-    <header className="App-header reveal reveal--center">
+    <header className="App-header reveal reveal--center" dir="rtl" lang="ar">
       <div>
-        <nav>
+        <nav aria-label="التنقّل الرئيسي">
           <span id="span-project-button">
-            <button id="project-button"> هل لديك مشروع؟</button>
+            <button id="project-button" aria-label="لديك مشروع؟">
+              هل لديك مشروع؟
+            </button>
           </span>
+
           <ul>
             <li>
-              <a href={authed ? "/account" : "/login"}>
-                {authed ? "حسابي" : "تسجيل الدخول"}
-              </a>
+              <a href="/">الرئيسية</a>
             </li>
             <li>
-              <a href="/my-products">منتجاتي</a>
-            </li>
-            <li>
-              <a href="/courses">الدورات</a>
+              <a href="/handbook">طريقة العمل</a>
             </li>
             <li>
               <a href="/my-projects">مشاريعي</a>
             </li>
             <li>
-              <a href="/handbook"> منهجية العمل</a>
+              <a href="/courses">الدروس</a>
             </li>
             <li>
-              <a href="/">الصفحة الرئيسية</a>
+              <a href="/my-products">منتجاتي</a>
             </li>
+
+            {ready ? (
+              user ? (
+                <>
+                  <li>
+                    <a href="/account">حسابي</a>
+                  </li>
+                  <li>
+                    <a href="/logout" onClick={handleLogout}>
+                      تسجيل الخروج
+                    </a>
+                  </li>
+                </>
+              ) : (
+                <>
+                  <li>
+                    <a href="/login">تسجيل الدخول</a>
+                  </li>
+                  <li>
+                    <a href="/register">إنشاء حساب</a>
+                  </li>
+                </>
+              )
+            ) : null}
           </ul>
+
           <span id="span-budu-logo">
-            <a href="/">
-              <img src={buduLogo} id="budu-logo" alt="Budu logo" />
+            <a href="/" aria-label="العودة إلى الرئيسية">
+              <img src={buduLogo} id="budu-logo" alt="شعار بودو" />
             </a>
           </span>
         </nav>
@@ -46,57 +74,3 @@ function Header() {
     </header>
   );
 }
-export default Header;
-
-// import { Link, NavLink } from "react-router-dom";
-// import "../css/Header.css";
-
-// export default function Header() {
-//   const auth = true;
-//   return (
-//     <header className="site-header">
-//       <div className="container row">
-//         <Link to="/" className="brand">
-//           BUDU
-//         </Link>
-//         <nav className="nav">
-//           <NavLink to={auth ? "/account" : "/login"}>
-//             {auth ? "حسابي" : "تسجيل الدخول"}
-//           </NavLink>
-//           <NavLink
-//             to="/my-products"
-//             end
-//             className={({ isActive }) => (isActive ? "active" : "") + " "}
-//           >
-//             منتجاتي
-//           </NavLink>
-//           <NavLink
-//             to="/courses"
-//             end
-//             className={({ isActive }) => (isActive ? "active" : "") + " "}
-//           >
-//             الدورات
-//           </NavLink>
-//           <NavLink
-//             to="/my-projects"
-//             className={({ isActive }) => (isActive ? "active" : "") + " "}
-//           >
-//             مشاريعي
-//           </NavLink>
-//           <NavLink
-//             to="/handbook"
-//             className={({ isActive }) => (isActive ? "active" : "") + " "}
-//           >
-//             منهجية العمل
-//           </NavLink>
-//           <NavLink
-//             to="/"
-//             className={({ isActive }) => (isActive ? "active" : "") + " "}
-//           >
-//             الصفحة الرئيسية
-//           </NavLink>
-//         </nav>
-//       </div>
-//     </header>
-//   );
-// }

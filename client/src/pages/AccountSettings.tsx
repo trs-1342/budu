@@ -45,7 +45,7 @@ export default function AccountSettings() {
 
   useEffect(() => {
     if (!getToken()) {
-      nav("/auth", { replace: true });
+      nav("/login", { replace: true });
       return;
     }
     (async () => {

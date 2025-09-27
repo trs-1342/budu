@@ -1,232 +1,121 @@
-// // src/lib/api.ts
-// const API = import.meta.env.VITE_API_BASE || "http://localhost:1002";
-
-// export function getToken(): string | null {
-//   return localStorage.getItem("token");
-// }
-
-// type ApiOptions = {
-//   method?: "GET" | "POST" | "PATCH" | "DELETE";
-//   body?: any;
-//   auth?: boolean; // Authorization ekle
-// };
-
-// export async function api<T = any>(
-//   path: string,
-//   opts: ApiOptions = {}
-// ): Promise<T> {
-//   const headers: Record<string, string> = {
-//     "Content-Type": "application/json",
-//   };
-//   if (opts.auth !== false) {
-//     const t = getToken();
-//     if (t) headers.Authorization = `Bearer ${t}`;
-//   }
-//   const res = await fetch(`${API}${path}`, {
-//     method: opts.method || "GET",
-//     headers,
-//     body: opts.body ? JSON.stringify(opts.body) : undefined,
-//     credentials: "include", // refresh cookie vs.
-//   });
-
-//   const data = await res.json().catch(() => ({}));
-//   if (!res.ok) {
-//     throw new Error(
-//       (data && (data.error || data.message)) || "İstek başarısız"
-//     );
-//   }
-
-//   // Backend login eski "access" döndürürse normalize et
-//   if ((data as any).access && !(data as any).token) {
-//     (data as any).token = (data as any).access;
-//   }
-
-//   return data as T;
-// }
-
-// // src/lib/api.tsx
-// export type ApiError = { error?: string };
-
-// // export async function api<T = any>(
-// //   path: string,
-// //   init: RequestInit = {}
-// // ): Promise<T> {
-// //   const res = await fetch(path, {
-// //     credentials: "include", // çerezleri gönder
-// //     headers: {
-// //       "Content-Type": "application/json",
-// //       ...(init.headers || {}),
-// //     },
-// //     ...init,
-// //   });
-
-// //   // JSON olmayan yanıtlar için de deneyelim
-// //   const tryJson = async () => {
-// //     try { return await res.json(); } catch { return {}; }
-// //   };
-
-// //   if (!res.ok) {
-// //     const j = (await tryJson()) as ApiError;
-// //     throw new Error(j?.error || res.statusText);
-// //   }
-// //   return (await tryJson()) as T;
-// // }
-
-// // Kısa yol helpers
-// // ! HATALI
-// // export const AuthApi = {
-// //   register(body: { email: string; username: string; password: string }) {
-// //     return api("/api/auth/user-register", {
-// //       method: "POST",
-// //       body: JSON.stringify(body),
-// //     });
-// //   },
-// //   login(body: { email?: string; username?: string; password: string }) {
-// //     return api("/api/auth/user-login", {
-// //       method: "POST",
-// //       body: JSON.stringify(body),
-// //     });
-// //   },
-// //   logout() {
-// //     return api("/api/auth/logout", { method: "POST" });
-// //   },
-// // };
-
-// export const AuthApi = {
-//   register(body: { email: string; username: string; password: string }) {
-//     return api("/api/auth/user-register", {
-//       method: "POST",
-//       body, // ✅ DÜZ OBJE (wrapper string'ler)
-//     });
-//   },
-//   login(body: {
-//     emailOrUsername?: string;
-//     email?: string;
-//     username?: string;
-//     password: string;
-//     remember?: boolean;
-//   }) {
-//     return api("/api/auth/user-login", {
-//       method: "POST",
-//       body, // ✅ DÜZ OBJE
-//     });
-//   },
-//   logout() {
-//     return api("/api/auth/logout", { method: "POST" });
-//   },
-// };
-
-// export type MeDto = {
-//   id: number;
-//   email: string;
-//   username: string;
-//   phone?: string | null;
-//   countryDial?: string | null;
-//   membershipNotify: boolean;
-// };
-
-// export const AccountApi = {
-//   me() {
-//     return api<MeDto>("/api/account/user-me");
-//   },
-//   update(body: { username?: string; phone?: string; countryDial?: string }) {
-//     return api("/api/account/user-update", {
-//       method: "PATCH",
-//       body: JSON.stringify(body),
-//     });
-//   },
-//   changePassword(body: { currentPassword: string; newPassword: string }) {
-//     return api("/api/account/user-change-password", {
-//       method: "POST",
-//       body: JSON.stringify(body),
-//     });
-//   },
-//   notifyMembership(allow: boolean) {
-//     return api("/api/account/user-notify-membership", {
-//       method: "POST",
-//       body: JSON.stringify({ allow }),
-//     });
-//   },
-//   delete() {
-//     return api("/api/account/user-delete", { method: "DELETE" });
-//   },
-// };
-
-// src/lib/api.ts
+// src/lib/api.tsx
+// Merkez API yardımcıları + Auth uçları
 const API = import.meta.env.VITE_API_BASE || "http://localhost:1002";
 
+// Hem eski hem yeni anahtarlarla uyum
+const KEYS = ["token", "access"];
+
+// === Token Yardımcıları ===
 export function getToken(): string | null {
-  return localStorage.getItem("token");
+  for (const k of KEYS) {
+    const v = localStorage.getItem(k) || sessionStorage.getItem(k);
+    if (v) return v;
+  }
+  return null;
 }
 
+function removeAllTokens() {
+  for (const k of KEYS) {
+    localStorage.removeItem(k);
+    sessionStorage.removeItem(k);
+  }
+}
+
+export function setToken(tok: string | null, remember = true, emit = true) {
+  const prev = getToken(); // önceki değer
+  if (tok === null) {
+    removeAllTokens();
+    if (prev && emit) window.dispatchEvent(new Event("auth-changed"));
+    return;
+  }
+  // yaz
+  removeAllTokens();
+  const store = remember ? localStorage : sessionStorage;
+  store.setItem("token", tok); // yeni standart
+  store.setItem("access", tok); // geriye dönük uyum
+  // değişiklik olduysa event fırlat
+  if (tok !== prev && emit) window.dispatchEvent(new Event("auth-changed"));
+}
+
+/** Token’ı temizler; emit=false ise auth-changed olayı fırlatmaz. */
+export function clearToken(opts?: { emit?: boolean }) {
+  const emit = opts?.emit ?? true;
+  const had = !!getToken();
+  if (!had) {
+    // zaten temiz; yeni event fırlatma
+    return;
+  }
+  removeAllTokens();
+  if (emit) window.dispatchEvent(new Event("auth-changed"));
+}
+
+// === JWT Yardımcıları ===
+function base64UrlDecode(s: string): string {
+  try {
+    const b64 =
+      s.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((s.length + 3) % 4);
+    return atob(b64);
+  } catch {
+    return "";
+  }
+}
+
+export function parseJwt<T = any>(token: string): T | null {
+  try {
+    const payload = token.split(".")[1];
+    if (!payload) return null;
+    const json = base64UrlDecode(payload);
+    return JSON.parse(json) as T;
+  } catch {
+    return null;
+  }
+}
+
+/** Küçük saat kaymalarına dayanıklı exp kontrolü */
+export function isJwtValid(token: string, skewSeconds = 30): boolean {
+  const p: any = parseJwt(token);
+  const exp = typeof p?.exp === "number" ? p.exp : 0;
+  if (!exp) return false;
+  const now = Math.floor(Date.now() / 1000) - Math.max(0, skewSeconds);
+  return exp > now;
+}
+
+// === Genel fetch sarmalayıcı ===
 type ApiOptions = {
   method?: "GET" | "POST" | "PATCH" | "DELETE";
-  body?: any; // object | string | FormData
-  auth?: boolean; // Authorization ekle
-  timeoutMs?: number; // isteğe özel timeout
+  body?: any;
+  auth?: boolean;
 };
 
 export async function api<T = any>(
   path: string,
   opts: ApiOptions = {}
 ): Promise<T> {
-  const isForm =
-    typeof FormData !== "undefined" && opts.body instanceof FormData;
+  const { method = "GET", body, auth = true } = opts;
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  const init: RequestInit = { method, headers, credentials: "include" };
 
-  const headers: Record<string, string> = {};
-  if (!isForm) headers["Content-Type"] = "application/json";
+  const t = getToken();
+  if (auth && t) headers["Authorization"] = `Bearer ${t}`;
+  if (body !== undefined)
+    init.body = typeof body === "string" ? body : JSON.stringify(body);
 
-  if (opts.auth !== false) {
-    const t = getToken();
-    if (t) headers.Authorization = `Bearer ${t}`;
-  }
-
-  // —— timeout ——
-  const ac = new AbortController();
-  const timeout = setTimeout(() => ac.abort(), opts.timeoutMs ?? 15000);
-
-  let payload: BodyInit | undefined = undefined;
-  if (typeof opts.body === "string" || isForm) {
-    payload = opts.body as any;
-  } else if (opts.body && typeof opts.body === "object") {
-    payload = JSON.stringify(opts.body); // stringify YALNIZCA burada
-  }
-
-  let res: Response;
-  try {
-    res = await fetch(`${API}${path}`, {
-      method: opts.method || "GET",
-      headers,
-      body: payload,
-      credentials: "include",
-      signal: ac.signal,
-    });
-  } catch (e: any) {
-    clearTimeout(timeout);
-    if (e?.name === "AbortError") throw new Error("İstek zaman aşımına uğradı");
-    throw new Error("Ağ hatası: " + (e?.message || "bağlantı sağlanamadı"));
-  }
-  clearTimeout(timeout);
-
-  let data: any = {};
-  try {
-    data = await res.json();
-  } catch {}
+  const res = await fetch(`${API}${path}`, init);
+  const isJson = res.headers.get("content-type")?.includes("application/json");
+  const data = isJson ? await res.json().catch(() => ({})) : undefined;
 
   if (!res.ok) {
-    const msg =
-      (data && (data.error || data.message)) ||
-      `${res.status} ${res.statusText}`;
-    throw new Error(msg);
+    if (res.status === 401) clearToken({ emit: true });
+    throw new Error((data && (data.error || data.message)) || res.statusText);
   }
-
-  // Eski login formatlarını normalize et
-  if (data?.access && !data?.token) data.token = data.access;
-
-  return data as T;
+  return (data as T) ?? ({} as T);
 }
 
-// Yardımcılar — stringify ETME; wrapper halleder
+// === Auth API ===
+export type Me = { id: number; username: string; email: string };
+
 export const AuthApi = {
   register(body: {
     fname?: string;
@@ -239,16 +128,32 @@ export const AuthApi = {
   }) {
     return api("/api/auth/user-register", { method: "POST", body });
   },
-  login(body: {
+
+  async login(payload: {
     emailOrUsername?: string;
     email?: string;
     username?: string;
     password: string;
     remember?: boolean;
   }) {
-    return api("/api/auth/user-login", { method: "POST", body });
+    const data = await api<{ token?: string; user?: any }>(
+      "/api/auth/user-login",
+      { method: "POST", body: payload, auth: false }
+    );
+    if (data?.token) setToken(data.token, !!payload.remember, true);
+    return data;
   },
-  logout() {
-    return api("/api/auth/logout", { method: "POST" });
+
+  // Sunucu: GET /api/account/user-me → doğrudan user objesi döndürüyor
+  me() {
+    return api<Me>("/api/account/user-me");
+  },
+
+  async logout() {
+    // Token’ı sil ve olayı biz fırlatalım
+    clearToken({ emit: true });
+    try {
+      await api("/api/auth/user-logout", { method: "POST" });
+    } catch {}
   },
 };

@@ -1,92 +1,170 @@
-/* Login.css */
-.auth-wrap {
+/* src/pages/auth/Login.css */
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap");
+
+#login {
   min-height: 100dvh;
   display: grid;
   place-items: center;
   padding: 24px;
-  background: #0b0b0c;
+  background-color: #0a0a0f; /* Register ile aynı koyu arka plan */
 }
-.auth-card {
+
+#login,
+#login * {
+  font-family: "Inter", sans-serif;
+  color: #e2e6ee;
+}
+
+/* Kart */
+#login form {
   width: 100%;
-  max-width: 480px;
-  background: #121216;
-  border: 1px solid #1f1f26;
+  max-width: 520px;
+  background-color: #12141a;
+  border: 1px solid #2e323e;
   border-radius: 16px;
-  padding: 20px 18px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  padding: 32px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
   display: grid;
-  gap: 14px;
+  gap: 18px;
 }
-.auth-title {
-  margin: 0 0 4px;
-  font: 700 22px/1.2 ui-sans-serif, system-ui;
-  color: #fff;
-  letter-spacing: 0.1px;
+
+#login h1 {
+  margin: 0 0 12px;
+  font-size: 24px;
+  font-weight: 800;
+  text-align: center;
+  color: #ffffff;
 }
-.auth-field {
-  display: grid;
-  gap: 6px;
+
+/* Etiketler */
+#login label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #9ca3af;
 }
-.auth-field > span {
-  color: #b6b6c2;
-  font: 600 12px/1 ui-sans-serif, system-ui;
+
+/* Girişler */
+#login input[type="text"],
+#login input[type="email"],
+#login input[type="password"] {
+  width: 100%;
+  background-color: #1a1c23;
+  border: 1px solid #3a3d47;
+  color: #f1f5f9;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 12px;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
-.auth-input {
-  background: #0f0f13;
-  border: 1px solid #2a2a35;
-  border-radius: 10px;
-  padding: 12px 13px;
-  color: #f3f3f7;
-  font: 500 14px/1.2 ui-sans-serif, system-ui;
+
+#login input:focus {
   outline: none;
+  border-color: #34d399;
+  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.3);
 }
-.auth-input:focus {
-  border-color: #22c55e;
-  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.18);
+
+#login input::placeholder {
+  color: #6b7280;
+  opacity: 1;
 }
-.auth-row {
+
+/* Şifre gözü */
+#login .relative {
+  position: relative;
+}
+#login .eye {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #9ca3af;
+  font-size: 18px;
+  cursor: pointer;
+}
+#login .eye:hover {
+  color: #e2e6ee;
+}
+
+/* Satır düzenleri */
+#login .row {
   display: flex;
+  gap: 12px;
   align-items: center;
-  gap: 8px;
-  color: #b6b6c2;
-  font: 500 13px/1 ui-sans-serif, system-ui;
 }
-.auth-row.between {
+#login .between {
   justify-content: space-between;
 }
-.auth-link {
-  color: #60a5fa;
-  text-decoration: none;
-}
-.auth-link:hover {
-  text-decoration: underline;
-}
-.auth-error {
-  color: #fca5a5;
-  background: #2a1313;
-  border: 1px solid #7f1d1d;
-  border-radius: 10px;
-  padding: 8px 10px;
-  font: 600 13px/1.2 ui-sans-serif, system-ui;
-}
-.auth-btn {
-  margin-top: 6px;
-  border: none;
-  border-radius: 12px;
-  padding: 11px 14px;
-  cursor: pointer;
-  font: 700 14px/1 ui-sans-serif, system-ui;
-}
-.auth-btn.primary {
-  background: #22c55e;
-  color: #0b0b0c;
-}
-.auth-btn.primary:hover {
-  filter: brightness(1.05);
-}
-.auth-check {
+
+/* Checkbox */
+#login .checkbox {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  user-select: none;
+  font-size: 13px;
+  color: #9ca3af;
+}
+#login .checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #34d399;
+}
+
+/* Hata mesajı */
+#login .text-red-400 {
+  background-color: #3f1d1d;
+  color: #f87171;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  border: 1px solid #7f1d1d;
+}
+
+/* Gönder butonu */
+#login button[type="submit"] {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(to bottom, #34d399, #059669);
+  color: #0f172a;
+  font-weight: 700;
+  font-size: 15px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+#login button[type="submit"]:hover {
+  filter: brightness(1.1);
+}
+#login button[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Alt metin ve link */
+#login .below {
+  text-align: center;
+  font-size: 14px;
+  color: #9ca3af;
+  margin-top: 8px;
+}
+#login .link {
+  color: #60a5fa;
+  font-weight: 700;
+  text-decoration: none;
+  margin-left: 4px;
+}
+#login .link:hover {
+  text-decoration: underline;
+}
+
+/* Mobil uyum (gerekirse) */
+@media (max-width: 600px) {
+  #login form {
+    padding: 24px;
+    border-radius: 14px;
+  }
 }

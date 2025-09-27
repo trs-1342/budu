@@ -46,7 +46,7 @@ export default function AdminLayout() {
           email={me?.email}
         />
         <main className="ad-main">
-          <header className="ad-topbar" style={{height:"50px"}}>
+          <header className="ad-topbar" style={{ height: "50px" }}>
             <div className="ad-top-title">Yönetim</div>
           </header>
           <section className="ad-content">
