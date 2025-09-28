@@ -15,9 +15,9 @@ import CoursesWatch from "./pages/CoursesWatch";
 import MyProducts from "./pages/MyProducts";
 import PostDetail from "./pages/PostDetail";
 // import Auth from "./pages/Auth";
-import Register from "./pages/auth/Register.tsx";
-import Login from "./pages/auth/Login.tsx";
-import AccountSettings from "./pages/AccountSettings";
+// import Register from "./pages/auth/Register.tsx";
+// import Login from "./pages/auth/Login.tsx";
+// import AccountSettings from "./pages/AccountSettings";
 
 // ADMIN PAGES
 import AdminLogin from "./admin/pages/AdminLogin";
@@ -54,11 +54,11 @@ function RequireAuth() {
   return <Outlet />;
 }
 
-function RequireUser() {
-  const token = getAccessToken();
-  if (!token) return <Navigate to="/login" replace />;
-  return <Outlet />;
-}
+// function RequireUser() {
+//   const token = getAccessToken();
+//   if (!token) return <Navigate to="/login" replace />;
+//   return <Outlet />;
+// }
 
 function App() {
   useRevealOnScroll();
@@ -74,12 +74,12 @@ function App() {
             <Route path="/courses" element={<Courses />} />
             <Route path="/courses/watch/:id" element={<CoursesWatch />} />
             <Route path="/my-products" element={<MyProducts />} />
-            {/* <Route path="/auth" element={<Auth />} /> */}
+            {/* <Route path="/auth" element={<Auth />} />
             <Route path="/register" element={<Register />} />
             <Route path="/login" element={<Login />} />
             <Route element={<RequireUser />}>
               <Route path="/account" element={<AccountSettings />} />
-            </Route>
+            </Route> */}
             <Route path="/post/:slug" element={<PostDetail />} />
             {/* admin routers */}
             <Route path="/admin/login" element={<AdminLogin />} />
