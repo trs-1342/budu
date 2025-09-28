@@ -150,6 +150,27 @@ app.use(
   })
 );
 
+function isEmail(x) {
+  return EMAIL_RE.test(String(x || "").toLowerCase());
+}
+
+function ensureAdmin(req, res, next) {
+  try {
+    const bearer = req.headers.authorization?.startsWith("Bearer ")
+      ? req.headers.authorization.slice(7)
+      : null;
+    const token =
+      bearer || req.cookies?.access || req.cookies?.access_token || null;
+    if (!token) return res.status(401).json({ error: "Unauthorized" });
+    const p = verifyAccess(token); // JWT_ACCESS_SECRET ile doğrula
+    req.user = { id: p.sub, role: req.user?.role };
+    // rol bilgisini al (sonraki middleware zaten email/role boşsa dolduruyor)
+    return next();
+  } catch {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+}
+
 function requireAuth(req, res, next) {
   if (req.user && req.user.id) return next();
 
@@ -375,7 +396,6 @@ app.get("/api/auth/me", async (req, res) => {
   }
 });
 
-
 app.get("/api/public/posts", async (req, res) => {
   try {
     const page = String(req.query.page || "").trim(); // pages.key_slug
@@ -489,6 +509,206 @@ app.get("/api/messages/stats", requireAuth, async (_req, res) => {
     res.status(500).json({ error: "Sunucu hatası" });
   }
 });
+
+// ADMIN • USERS – Liste
+app.get(
+  "/api/admin/users",
+  requireAuth,
+  wrap(async (req, res) => {
+    // role=admin zorunlu değil; ama default admin listele
+    const role = String(req.query.role || "admin").toLowerCase();
+    const q = String(req.query.q || "").trim();
+
+    const where = [];
+    const params = [];
+    if (role && ["admin", "editor", "user"].includes(role)) {
+      where.push("role = ?");
+      params.push(role);
+    }
+    if (q) {
+      where.push("(username LIKE ? OR email LIKE ?)");
+      params.push(`%${q}%`, `%${q}%`);
+    }
+
+    const sql = `
+    SELECT id, username, email, role,
+           COALESCE(is_active, 1) AS is_active,
+           create_at
+    FROM users
+    ${where.length ? "WHERE " + where.join(" AND ") : ""}
+    ORDER BY id DESC
+    LIMIT 200
+  `;
+    const [rows] = await pool.query(sql, params);
+    res.json({ list: rows });
+  })
+);
+
+// NEW: Admin • USERS – Create
+app.post(
+  "/api/admin/users",
+  requireAuth,
+  wrap(async (req, res) => {
+    // İstersen requireAuth yerine ensureAdmin kullan (rol kontrolü).
+    const { username, email, password, role, is_active } = req.body || {};
+
+    // basit doğrulama
+    if (!username || !USER_RE.test(String(username)))
+      return res.status(400).json({ error: "Geçersiz kullanıcı adı" });
+
+    if (!email || !EMAIL_RE.test(String(email)))
+      return res.status(400).json({ error: "Geçersiz e-posta" });
+
+    if (!password || String(password).trim().length < 6)
+      return res.status(400).json({ error: "Parola en az 6 karakter olmalı" });
+
+    const r = (role || "admin").toString().toLowerCase();
+    const allowed = ["admin", "editor", "user"];
+    const finalRole = allowed.includes(r) ? r : "admin";
+
+    const active = [1, "1", true, "true"].includes(is_active) ? 1 : 0;
+
+    const hash = await bcrypt.hash(String(password).trim(), 10);
+
+    try {
+      const [ins] = await pool.query(
+        `
+      INSERT INTO users (username, email, password, role${
+        /* is_active kolonu varsa ekleyelim */ ""
+      }${typeof active === "number" ? ", is_active" : ""})
+      VALUES (?, ?, ?, ?${typeof active === "number" ? ", ?" : ""})
+      `,
+        typeof active === "number"
+          ? [username, email.toLowerCase(), hash, finalRole, active]
+          : [username, email.toLowerCase(), hash, finalRole]
+      );
+
+      const id = ins.insertId;
+      const [rows] = await pool.query(
+        "SELECT id, username, email, role, COALESCE(is_active,1) AS is_active, create_at FROM users WHERE id = ? LIMIT 1",
+        [id]
+      );
+      return res.status(201).json({ item: rows[0] });
+    } catch (e) {
+      // benzersiz kısıtlar
+      if (e && e.code === "ER_DUP_ENTRY") {
+        // hangi alan çakıştı söyle
+        const msg = /users\.email/i.test(e.sqlMessage || "")
+          ? "E-posta kullanımda"
+          : /users\.username/i.test(e.sqlMessage || "")
+          ? "Kullanıcı adı kullanımda"
+          : "Zaten kayıtlı";
+        return res.status(409).json({ error: msg });
+      }
+      // is_active kolonu yoksa fallback: kolonsuz tekrar dene
+      if (e && e.code === "ER_BAD_FIELD_ERROR") {
+        const [ins2] = await pool.query(
+          `INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)`,
+          [username, email.toLowerCase(), hash, finalRole]
+        );
+        const id2 = ins2.insertId;
+        const [rows2] = await pool.query(
+          "SELECT id, username, email, role, COALESCE(is_active,1) AS is_active, create_at FROM users WHERE id = ? LIMIT 1",
+          [id2]
+        );
+        return res.status(201).json({ item: rows2[0] });
+      }
+      throw e;
+    }
+  })
+);
+
+// ADMIN • USERS – Tek kayıt
+app.get(
+  "/api/admin/users/:id",
+  requireAuth,
+  wrap(async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id))
+      return res.status(400).json({ error: "Geçersiz id" });
+
+    const [rows] = await pool.query(
+      "SELECT id, username, email, role, COALESCE(is_active,1) AS is_active, create_at FROM users WHERE id = ? LIMIT 1",
+      [id]
+    );
+    if (!rows.length) return res.status(404).json({ error: "Bulunamadı" });
+    res.json({ item: rows[0] });
+  })
+);
+
+// ADMIN • USERS – Güncelle
+app.patch(
+  "/api/admin/users/:id",
+  requireAuth,
+  wrap(async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id))
+      return res.status(400).json({ error: "Geçersiz id" });
+
+    const { username, email, password, is_active } = req.body || {};
+    const sets = [];
+    const vals = [];
+
+    if (username && USER_RE.test(username)) {
+      sets.push("username = ?");
+      vals.push(username);
+    }
+    if (email && isEmail(email)) {
+      sets.push("email = ?");
+      vals.push(email.toLowerCase());
+    }
+    if (typeof is_active !== "undefined") {
+      // kolon yoksa hata fırlayabilir; aşağıda yakalayıp tekrar deneriz
+      sets.push("is_active = ?");
+      vals.push([1, "1", true, "true"].includes(is_active) ? 1 : 0);
+    }
+    if (password && String(password).trim().length >= 6) {
+      const hash = await bcrypt.hash(String(password).trim(), 10);
+      sets.push("password = ?");
+      vals.push(hash);
+    }
+
+    if (sets.length === 0)
+      return res.status(400).json({ error: "Güncellenecek alan yok" });
+
+    const run = async (ignoreActiveCol = false) => {
+      const finalSets = ignoreActiveCol
+        ? sets.filter((s) => !/^is_active\s*=/.test(s))
+        : sets;
+      const finalVals = ignoreActiveCol
+        ? vals.filter((_, i) => !/^is_active\s*=/.test(sets[i]))
+        : vals;
+
+      if (finalSets.length === 0) {
+        // sadece is_active vardı ama kolon yoksa
+        return null;
+      }
+      const sql = `UPDATE users SET ${finalSets.join(", ")} WHERE id = ?`;
+      await pool.query(sql, [...finalVals, id]);
+      const [rows2] = await pool.query(
+        "SELECT id, username, email, role, COALESCE(is_active,1) AS is_active, create_at FROM users WHERE id = ? LIMIT 1",
+        [id]
+      );
+      return rows2[0] || null;
+    };
+
+    try {
+      const item = await run(false);
+      if (!item)
+        return res.json({
+          item: { id, username, email, role: "admin", is_active: 1 },
+        });
+      return res.json({ item });
+    } catch (e) {
+      // ER_BAD_FIELD_ERROR: is_active kolonu yoksa
+      if (e && e.code === "ER_BAD_FIELD_ERROR") {
+        const item = await run(true);
+        if (item) return res.json({ item });
+      }
+      throw e;
+    }
+  })
+);
 
 app.post(
   "/api/admin/upload",
