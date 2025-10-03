@@ -128,6 +128,38 @@ app.use((req, res, next) => {
   next();
 });
 
+function cookieOpts(maxAgeMs) {
+  const isProd = process.env.NODE_ENV === "production";
+  // Farklı origin kullanıyorsan SameSite=None gerekir (Chrome).
+  const crossSite = true; // front ve api farklı origin/port ise true kalsın
+  return {
+    httpOnly: true,
+    secure: isProd || crossSite, // localde de secure:true olmalıysa crossSite kontrolü ekle
+    sameSite: crossSite ? "none" : "lax",
+    maxAge: maxAgeMs,
+    path: "/",
+  };
+}
+
+// function signAccess(user) {
+//   return jwt.sign({ sub: user.id, role: user.role }, JWT_ACCESS_SECRET, {
+//     expiresIn: "15m",
+//   });
+// }
+// function signRefresh(user) {
+//   return jwt.sign({ sub: user.id, role: user.role }, JWT_REFRESH_SECRET, {
+//     expiresIn: "7d",
+//   });
+// }
+
+async function getUserById(id) {
+  const [rows] = await pool.query(
+    "SELECT id, username, email, role, COALESCE(is_active,1) AS is_active FROM users WHERE id = ? LIMIT 1",
+    [id]
+  );
+  return rows[0] || null;
+}
+
 app.use(
   "/uploads",
   express.static(UPLOAD_DIR, { maxAge: "365d", immutable: true })
@@ -154,66 +186,109 @@ function isEmail(x) {
   return EMAIL_RE.test(String(x || "").toLowerCase());
 }
 
+// function ensureAdmin(req, res, next) {
+//   try {
+//     const bearer = req.headers.authorization?.startsWith("Bearer ")
+//       ? req.headers.authorization.slice(7)
+//       : null;
+//     const token =
+//       bearer || req.cookies?.access || req.cookies?.access_token || null;
+//     if (!token) return res.status(401).json({ error: "Unauthorized" });
+//     const p = verifyAccess(token); // JWT_ACCESS_SECRET ile doğrula
+//     req.user = { id: p.sub, role: req.user?.role };
+//     // rol bilgisini al (sonraki middleware zaten email/role boşsa dolduruyor)
+//     return next();
+//   } catch {
+//     return res.status(401).json({ error: "Unauthorized" });
+//   }
+// }
+
 function ensureAdmin(req, res, next) {
-  try {
-    const bearer = req.headers.authorization?.startsWith("Bearer ")
-      ? req.headers.authorization.slice(7)
-      : null;
-    const token =
-      bearer || req.cookies?.access || req.cookies?.access_token || null;
-    if (!token) return res.status(401).json({ error: "Unauthorized" });
-    const p = verifyAccess(token); // JWT_ACCESS_SECRET ile doğrula
-    req.user = { id: p.sub, role: req.user?.role };
-    // rol bilgisini al (sonraki middleware zaten email/role boşsa dolduruyor)
-    return next();
-  } catch {
-    return res.status(401).json({ error: "Unauthorized" });
+  if (!req.user || req.user.role !== "admin") {
+    return res.status(403).json({ error: "Admin gerekli" });
   }
+  next();
 }
 
-function requireAuth(req, res, next) {
-  if (req.user && req.user.id) return next();
+// async function requireAuth(req, res, next) {
+//   try {
+//     const access = req.cookies?.access;
+//     if (!access) throw new Error("no-access");
 
-  const bearer = req.headers.authorization?.startsWith("Bearer ")
-    ? req.headers.authorization.slice(7)
-    : null;
-  const cookieAccess =
-    req.cookies?.access ||
-    req.cookies?.access_token ||
-    req.cookies?.token ||
-    null;
+//     let payload;
+//     try {
+//       payload = jwt.verify(access, JWT_ACCESS_SECRET);
+//     } catch (e) {
+//       // access expired ise refresh dene
+//       const r = req.cookies?.refresh;
+//       if (!r) return res.status(401).json({ error: "Yetkisiz" });
+//       const rp = jwt.verify(r, JWT_REFRESH_SECRET);
+//       const u = await getUserById(rp.sub);
+//       if (!u) return res.status(401).json({ error: "Yetkisiz" });
 
-  let token = bearer || cookieAccess;
+//       // pasif engel
+//       if (typeof u.is_active !== "undefined" && Number(u.is_active) === 0) {
+//         res.clearCookie("access", cookieOpts(0));
+//         res.clearCookie("refresh", cookieOpts(0));
+//         return res.status(403).json({ error: "Hesap pasif" });
+//       }
 
-  if (!token && req.cookies?.refresh) {
-    try {
-      const r = verifyRefresh(req.cookies.refresh); // JWT_REFRESH_SECRET
-      const fresh = signAccess({ sub: r.sub }); // JWT_ACCESS_SECRET
-      res.cookie("access", fresh, {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: false,
-        maxAge: ms(process.env.ACCESS_TTL || "10m"),
-      });
-      token = fresh;
-    } catch {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-  }
+//       const newAccess = signAccess(u);
+//       res.cookie("access", newAccess, cookieOpts(15 * 60 * 1000));
+//       req.user = { id: u.id, role: u.role };
+//       return next();
+//     }
 
-  if (!token) return res.status(401).json({ error: "Unauthorized" });
+//     const u = await getUserById(payload.sub);
+//     if (!u) return res.status(401).json({ error: "Yetkisiz" });
 
+//     if (typeof u.is_active !== "undefined" && Number(u.is_active) === 0) {
+//       return res.status(403).json({ error: "Hesap pasif" });
+//     }
+
+//     req.user = { id: u.id, role: u.role };
+//     next();
+//   } catch (e) {
+//     return res.status(401).json({ error: "Yetkisiz" });
+//   }
+// }
+
+async function requireAuth(req, res, next) {
   try {
-    const p = verifyAccess(token); // *** sadece JWT_ACCESS_SECRET ***
-    req.user = {
-      id: p.sub,
-      email: p.email,
-      role: p.role,
-      is_admin: p.is_admin,
-    };
-    next();
+    const a = req.cookies?.access;
+    if (a) {
+      try {
+        const ap = verifyAccess(a);
+        req.user = await getUserById(ap.sub);
+        if (!req.user) return res.status(401).json({ error: "Yetkisiz" });
+        return next();
+      } catch {
+        /* access süresi dolmuş olabilir, refresh dene */
+      }
+    }
+
+    const r = req.cookies?.refresh;
+    if (!r) return res.status(401).json({ error: "Yetkisiz" });
+    const rp = verifyRefresh(r);
+    const u = await getUserById(rp.sub);
+    if (!u) return res.status(401).json({ error: "Yetkisiz" });
+    if (Number(u.is_active) === 0) {
+      res.clearCookie("access", cookieOpts(0));
+      res.clearCookie("refresh", cookieOpts(0));
+      return res.status(403).json({ error: "Hesap pasif" });
+    }
+
+    // yeni access bas
+    const access = signAccess({ sub: u.id, role: u.role });
+    res.cookie(
+      "access",
+      access,
+      cookieOpts(ms(process.env.ACCESS_TTL || "10m"))
+    );
+    req.user = u;
+    return next();
   } catch {
-    return res.status(401).json({ error: "Unauthorized" });
+    return res.status(401).json({ error: "Yetkisiz" });
   }
 }
 
@@ -250,6 +325,22 @@ function safeJoin(root, rel) {
 function ensureAdmin(req, res, next) {
   if (req.user && req.user.id) return next();
   return res.status(401).json({ error: "Unauthorized" });
+}
+
+function ensureAdmin(req, res, next) {
+  if (req.user && (req.user.role === "admin" || req.user.role === "editor"))
+    return next();
+  return res.status(403).json({ error: "Yasak" });
+}
+
+function parseKey(emailOrUsername = "") {
+  const key = String(emailOrUsername || "")
+    .trim()
+    .toLowerCase();
+  if (EMAIL_RE.test(key)) return { col: "email", val: key };
+  if (USER_RE.test(key)) return { col: "username", val: key };
+  // e-posta değilse kullanıcı adı gibi davran
+  return { col: "username", val: key };
 }
 
 function verifyPlayToken(req, res, next) {
@@ -316,84 +407,108 @@ function parseIdentifier(body) {
 // health
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
-// AUTHS
-app.post("/api/auth/login", async (req, res) => {
-  try {
-    const { emailOrUsername, password } = req.body || {};
+app.post(
+  "/api/auth/login",
+  wrap(async (req, res) => {
+    const { emailOrUsername, password, remember } = req.body || {};
     if (!emailOrUsername || !password) {
-      return res.status(400).json({ error: "Eksik alan" });
+      return res.status(400).json({ error: "Eksik bilgi" });
     }
 
+    const { col, val } = parseKey(emailOrUsername);
     const [rows] = await pool.query(
-      "SELECT id, username, email, password, create_at FROM users WHERE username = ? OR email = ? LIMIT 1",
-      [emailOrUsername, emailOrUsername, password]
+      `SELECT id, username, email, role, COALESCE(is_active,1) AS is_active, password
+     FROM users WHERE ${col} = ? LIMIT 1`,
+      [val]
     );
+    const u = rows?.[0];
+    if (!u) return res.status(401).json({ error: "Geçersiz bilgiler" });
 
-    if (!rows.length) return res.status(401).json({ error: "Geçersiz kimlik" });
-    const user = rows[0];
+    const ok = isBcrypt(u.password)
+      ? await bcrypt.compare(password, u.password)
+      : String(u.password) === String(password); // nadiren düz parola kalmış olabilir (dev)
+    if (!ok) return res.status(401).json({ error: "Geçersiz bilgiler" });
 
-    // parola kontrolü (plain veya bcrypt)
-    let ok = false;
-    if (isBcrypt(user.password))
-      ok = bcrypt.compareSync(password, user.password);
-    else ok = password === user.password;
-
-    if (!ok) return res.status(401).json({ error: "Geçersiz kimlik" });
-
-    // otomatik bcrypt migrasyon (plain ise)
-    if (!isBcrypt(user.password)) {
-      const hash = bcrypt.hashSync(user.password, 10);
-      await pool.query("UPDATE users SET password = ? WHERE id = ?", [
-        hash,
-        user.id,
-      ]);
+    if (Number(u.is_active) === 0) {
+      return res.status(403).json({ error: "Hesap pasif" });
     }
 
-    const access = signAccess({ sub: user.id, username: user.username });
-    const refresh = signRefresh({ sub: user.id });
+    // JWT üret
+    const payload = { sub: u.id, role: u.role };
+    const access = signAccess(payload);
+    const refresh = signRefresh(payload);
 
-    res.cookie("refresh", refresh, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: false, // prod: true
-      maxAge: ms(REFRESH_TTL),
+    // Çerezlere yaz (httpOnly + crossSite uyumlu)
+    const accessMs = ms(process.env.ACCESS_TTL || "10m");
+    const refreshMs = ms(process.env.REFRESH_TTL || "30d");
+    res.cookie("access", access, cookieOpts(accessMs));
+    res.cookie("refresh", refresh, cookieOpts(refreshMs));
+
+    // frontend geriye user istiyor; token opsiyonel (legacy)
+    res.json({
+      user: {
+        id: u.id,
+        username: u.username,
+        email: u.email,
+        role: u.role,
+        is_active: u.is_active,
+      },
+      token: access,
     });
+  })
+);
 
-    res.json({ access });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: "Sunucu hatası" });
-  }
-});
+app.get(
+  "/api/auth/me",
+  wrap(async (req, res) => {
+    // 1) httpOnly access cookie
+    let token = req.cookies?.access;
 
-app.post("/api/auth/refresh", async (req, res) => {
-  try {
-    const token = req.cookies?.refresh;
-    if (!token) return res.status(401).json({ error: "Yenileme yok" });
-    const payload = verifyRefresh(token);
-    const access = signAccess({ sub: payload.sub });
-    res.json({ access });
-  } catch {
-    return res.status(401).json({ error: "Geçersiz yenileme" });
-  }
-});
-
-app.get("/api/auth/me", async (req, res) => {
-  try {
-    const token = req.headers.authorization?.split(" ")[1];
+    // 2) Geriye dönük destek: Authorization: Bearer ...
+    if (!token && req.headers.authorization?.startsWith("Bearer ")) {
+      token = req.headers.authorization.split(" ")[1];
+    }
     if (!token) return res.status(401).json({ error: "Yetkisiz" });
-    const payload = verifyAccess(token);
 
-    const [rows] = await pool.query(
-      "SELECT id, username, email, create_at FROM users WHERE id = ? LIMIT 1",
-      [payload.sub]
-    );
-    if (!rows.length) return res.status(401).json({ error: "Yetkisiz" });
+    try {
+      const p = verifyAccess(token);
+      const u = await getUserById(p.sub);
+      if (!u) return res.status(401).json({ error: "Yetkisiz" });
+      return res.json({ user: u });
+    } catch {
+      return res.status(401).json({ error: "Yetkisiz" });
+    }
+  })
+);
 
-    res.json({ user: rows[0] });
-  } catch {
-    return res.status(401).json({ error: "Token geçersiz" });
-  }
+app.post(
+  "/api/auth/refresh",
+  wrap(async (req, res) => {
+    const r = req.cookies?.refresh;
+    if (!r) return res.status(401).json({ error: "Yetkisiz" });
+
+    try {
+      const rp = verifyRefresh(r);
+      const u = await getUserById(rp.sub);
+      if (!u) return res.status(401).json({ error: "Yetkisiz" });
+
+      const payload = { sub: u.id, role: u.role };
+      const access = signAccess(payload);
+      const accessMs = ms(process.env.ACCESS_TTL || "10m");
+      res.cookie("access", access, cookieOpts(accessMs));
+      return res.json({ ok: true, token: access });
+    } catch {
+      res.clearCookie("access", cookieOpts(0));
+      res.clearCookie("refresh", cookieOpts(0));
+      return res.status(401).json({ error: "Yetkisiz" });
+    }
+  })
+);
+
+app.post("/api/auth/logout", (req, res) => {
+  res.clearCookie("access", cookieOpts(0));
+  res.clearCookie("refresh", cookieOpts(0));
+  res.json({ ok: true });
 });
 
 app.get("/api/public/posts", async (req, res) => {

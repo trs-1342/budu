@@ -1,136 +1,159 @@
-import { useState } from "react";
-import "../css/admin-scoped.css"; // GENEL admin tema (scoped)
-import "../css/login-scoped.css"; // Sadece login (scoped)
-import { BiHide, BiSolidShow } from "react-icons/bi";
+// src/admin/pages/AdminLogin.tsx
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { AuthApi, type Me } from "../../lib/api";
+import { useAuth } from "../../lib/auth-context";
+import "../css/login-scoped.css";
 
 export default function AdminLogin() {
-  const API = import.meta.env.VITE_API_BASE || "http://localhost:1002";
-  const [show, setShow] = useState(false);
+  const nav = useNavigate();
+  const { user, ready, setUser } = useAuth();
+
+  const [emailOrUsername, setEmailOrUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
+  const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const emailOrUsername = String(fd.get("username") ?? "").trim();
-    const password = String(fd.get("password") ?? "");
-    if (!emailOrUsername || !password)
-      return setErr("Lütfen tüm alanları doldurun.");
+  // Zaten admin olarak girişliyse direkt panele yolla
+  useEffect(() => {
+    if (!ready) return;
+    if (user && (user.role === "admin" || user.role === "editor")) {
+      nav("/admin", { replace: true });
+    }
+  }, [ready, user, nav]);
 
-    setLoading(true);
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (loading) return;
+
     setErr(null);
+    setLoading(true);
     try {
-      const res = await fetch(`${API}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ emailOrUsername, password }),
+      // 1) Giriş isteği (cookie veya token – backend hangisini veriyorsa)
+      await AuthApi.login({
+        emailOrUsername: emailOrUsername.trim(),
+        password: password,
+        remember,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Giriş başarısız.");
-      (remember ? localStorage : sessionStorage).setItem("access", data.access);
-      window.location.href = "/admin";
+
+      // 2) Me çağrısı ile kullanıcıyı çek
+      const me = (await AuthApi.me()) as Me | null;
+
+      // 3) Admin değilse içeri alma
+      if (!me || !["admin", "editor"].includes(String(me.role || ""))) {
+        setUser(null);
+        setErr("Yetkisiz hesap: Bu panele sadece admin/editor girebilir.");
+        return;
+      }
+
+      // 4) Context’i güncelle, event’i fırlat, panele yönlendir
+      setUser(me);
+      try {
+        window.dispatchEvent(new Event("auth-changed"));
+      } catch {}
+      nav("/admin", { replace: true });
     } catch (e: any) {
-      setErr(e.message || "Giriş başarısız.");
+      setErr(e?.message || "Giriş başarısız. Bilgileri kontrol edin.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="admin-scope">
-      {" "}
-      {/* <-- SCOPED */}
-      <div className="admin-auth">
-        {" "}
-        {/* tam ekran ortalama */}
-        <form className="login-card" onSubmit={handleSubmit} noValidate>
-          <header className="login-head">
-            <h1 className="login-title">BUDU • Admin</h1>
-            <p className="login-sub">Sadece yetkili kullanıcılar</p>
-          </header>
+    <div
+      className="admin-scope"
+      style={{
+        minHeight: "100vh",
+        display: "grid",
+        placeItems: "center",
+        padding: 16,
+        background: "#000",
+      }}
+    >
+      <form className="login-card" onSubmit={handleSubmit}>
+        <div className="login-head">
+          <h1 className="login-title">Yönetim Paneli</h1>
+          <p className="login-sub">Devam etmek için admin girişi yapın.</p>
+        </div>
 
-          <div className="form-group">
-            <label htmlFor="username" className="label">
-              Kullanıcı adı veya e-posta
-            </label>
+        {err && <div className="error">{err}</div>}
+
+        <div className="form-group">
+          <label className="label" htmlFor="emailOrUsername">
+            E-posta veya kullanıcı adı
+          </label>
+          <input
+            id="emailOrUsername"
+            className="input"
+            placeholder="admin@budu.local veya admin"
+            value={emailOrUsername}
+            onChange={(e) => setEmailOrUsername(e.target.value)}
+            autoComplete="username"
+            required
+          />
+        </div>
+
+        <div className="form-group">
+          <label className="label" htmlFor="password">
+            Parola
+          </label>
+          <div className="password-row">
             <input
-              id="username"
-              name="username"
+              id="password"
               className="input"
-              type="text"
-              placeholder="admin veya admin@budu.local"
-              autoComplete="username"
-              disabled={loading}
+              type={showPw ? "text" : "password"}
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
               required
             />
+            <button
+              type="button"
+              className="toggle-btn"
+              onClick={() => setShowPw((x) => !x)}
+              title={showPw ? "Gizle" : "Göster"}
+            >
+              {showPw ? "🙈" : "👁️"}
+            </button>
           </div>
+        </div>
 
-          <div className="form-group">
-            <label htmlFor="password" className="label">
-              Parola
-            </label>
-            <div className="password-row">
-              <input
-                id="password"
-                name="password"
-                className="input"
-                type={show ? "text" : "password"}
-                placeholder="••••••••"
-                autoComplete="current-password"
-                disabled={loading}
-                required
-              />
-              <button
-                type="button"
-                className="toggle-btn"
-                aria-label={show ? "Parolayı gizle" : "Parolayı göster"}
-                onClick={() => setShow((s) => !s)}
-                title={show ? "Gizle" : "Göster"}
-              >
-                {show ? <BiHide size={20} /> : <BiSolidShow size={20} />}
-              </button>
-            </div>
-          </div>
+        <div className="row">
+          <label className="checkbox">
+            <input
+              type="checkbox"
+              checked={remember}
+              onChange={(e) => setRemember(e.target.checked)}
+            />
+            Beni hatırla
+          </label>
 
-          <div className="row">
-            <label className="checkbox">
-              <input
-                type="checkbox"
-                name="remember"
-                checked={remember}
-                onChange={(e) => setRemember(e.target.checked)}
-                disabled={loading}
-              />
-              Beni hatırla
-            </label>
-            <a className="forgot" href="/admin/forgot">
-              Parolamı unuttum
-            </a>
-          </div>
+          <a className="forgot" href="#" onClick={(e) => e.preventDefault()}>
+            Parolamı unuttum
+          </a>
+        </div>
 
-          {err && (
-            <div className="error" role="alert">
-              {err}
-            </div>
-          )}
+        <button
+          className="btn"
+          type="submit"
+          disabled={
+            loading ||
+            emailOrUsername.trim().length < 2 ||
+            password.trim().length < 4
+          }
+          title="Giriş"
+        >
+          {loading ? "Giriş yapılıyor…" : "Giriş yap"}
+        </button>
 
-          <button className="btn" type="submit" disabled={loading}>
-            {loading ? "Giriş yapılıyor…" : "Giriş Yap"}
-          </button>
-
-          <button
-            className="btn secondary"
-            type="button"
-            onClick={() => (window.location.href = "/")}
-            disabled={loading}
-            style={{ marginTop: 10 }}
-          >
-            Anasayfaya Dön
-          </button>
-        </form>
-      </div>
+        {/* Opsiyonel: ikinci buton seti – örn. dev kolaylığı */}
+        {/* <button className="btn secondary" type="button" onClick={() => { setEmailOrUsername("admin"); setPassword("admin1234"); }}>
+          Admin (demo)
+        </button> */}
+      </form>
     </div>
   );
 }

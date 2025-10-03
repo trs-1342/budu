@@ -195,7 +195,6 @@ export default function AccountAdmins() {
         <CreateDrawer
           onClose={() => setCreateOpen(false)}
           onCreated={(created) => {
-            // yeni eklenen başa eklensin
             setList((xs) => [created, ...xs]);
             setCreateOpen(false);
           }}
@@ -205,7 +204,7 @@ export default function AccountAdmins() {
   );
 }
 
-/* === Düzenleme çekmecesi (mevcut) === */
+/* === Düzenleme çekmecesi === */
 function EditDrawer({
   id,
   onClose,
@@ -335,7 +334,7 @@ function EditDrawer({
   );
 }
 
-/* === YENİ: Oluşturma çekmecesi === */
+/* === Yeni: Oluşturma çekmecesi === */
 function CreateDrawer({
   onClose,
   onCreated,
@@ -450,10 +449,3 @@ function CreateDrawer({
     </div>
   );
 }
-
-/* Drawer örnek stilleri (Account.css içine koyabilirsin)
-.drawer-mask { position: fixed; inset: 0; background: rgba(0,0,0,.4); display:flex; justify-content:flex-end; z-index:999; }
-.drawer { width: 420px; max-width: 92vw; background:#1e1e1e; height:100%; padding:16px; border-left:1px solid var(--line,#333); }
-.drawer-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
-.drawer-title { margin:0; }
-*/

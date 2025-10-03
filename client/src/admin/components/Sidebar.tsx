@@ -22,7 +22,7 @@ export default function Sidebar({ onLogout, username }: Props) {
         <NavLink to="/admin" end className="ad-link">
           <span>Dashboard</span>
         </NavLink>
-        <NavLink to="/admin/account" className="ad-link">
+        <NavLink to="/admin/accounts" className="ad-link">
           <span>Hesap bilgileri</span>
         </NavLink>
         <NavLink to="/admin/messages" className="ad-link">
