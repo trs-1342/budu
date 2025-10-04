@@ -1,5 +1,6 @@
+// src/pages/auth/Register.tsx
 import { useMemo, useState } from "react";
-import "../css/Register.css";
+import "../css/Register.css"; // mevcut css
 import { COUNTRY_DIALS } from "../lib/countries";
 
 type FormState = {
@@ -22,6 +23,7 @@ export default function Register() {
     country_dial: "",
     phone: "",
   });
+  const [remember, setRemember] = useState(true); // <-- yeni
   const [showPw, setShowPw] = useState(false);
   const [touched, setTouched] = useState<Record<keyof FormState, boolean>>({
     username: false,
@@ -42,17 +44,16 @@ export default function Register() {
     [f.username]
   );
   const passwordOk = useMemo(
-    () => f.password.length >= 8 && f.password.length <= 72,
+    () => f.password.length >= 6 && f.password.length <= 72,
     [f.password]
   );
 
   const phoneOk = useMemo(() => {
-    if (!f.phone) return true;
+    if (!f.phone) return true; // opsiyonel
     const digits = f.phone.replace(/\D/g, "");
     return digits.length >= 6 && digits.length <= 16;
   }, [f.phone]);
 
-  // Telefon boşsa ülke kodu zorunlu DEĞİL
   const dialOk = useMemo(
     () => (!f.phone ? true : Boolean(f.country_dial)),
     [f.country_dial, f.phone]
@@ -75,7 +76,7 @@ export default function Register() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    // Şimdilik sadece UI; backend daha sonra eklenecek.
+    // Şimdilik sadece UI. Backend’i bağlayınca remember + kayıt akışı eklenecek.
   }
 
   return (
@@ -101,7 +102,6 @@ export default function Register() {
               autoComplete="given-name"
             />
           </div>
-
           <div className="form-group">
             <label className="label" htmlFor="sname">
               Soyad
@@ -172,7 +172,7 @@ export default function Register() {
                 touched.password && !passwordOk ? "invalid" : ""
               }`}
               type={showPw ? "text" : "password"}
-              placeholder="en az 8 karakter"
+              placeholder="en az 6 karakter"
               value={f.password}
               onBlur={() => onBlur("password")}
               onChange={(e) => set("password", e.target.value)}
@@ -216,7 +216,6 @@ export default function Register() {
                 </option>
               ))}
             </select>
-            {/* Telefon boşken bu uyarı görünmez */}
             {touched.country_dial && !dialOk && (
               <div className="hint">
                 Telefon girildiyse ülke kodu seçilmelidir.
@@ -254,11 +253,27 @@ export default function Register() {
           Kayıt ol
         </button>
 
+        {/* ALT BÖLÜM – İSTEDİKLERİN */}
         <footer className="reg-foot">
-          <span>Zaten hesabın var mı?</span>
-          <a href="/login" className="link">
-            Giriş yap
-          </a>
+          <label className="remember">
+            <input
+              type="checkbox"
+              checked={remember}
+              onChange={(e) => setRemember(e.target.checked)}
+            />
+            Beni hatırla
+          </label>
+
+          <div className="foot-links">
+            <span>Zaten hesabın var mı?</span>
+            <a href="/login" className="link">
+              Giriş yap
+            </a>
+            <span className="dot">·</span>
+            <a href="/forgot" className="link">
+              Şifremi unuttum
+            </a>
+          </div>
         </footer>
       </form>
     </div>

@@ -154,12 +154,61 @@
   text-decoration: underline;
 }
 
-/* küçük ekran düzeni */
+.reg-foot {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  color: #6b7280;
+  font-size: 14px;
+  flex-wrap: wrap;
+}
+
+.remember {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #374151;
+  font-weight: 600;
+  user-select: none;
+}
+.remember input {
+  width: 16px;
+  height: 16px;
+}
+
+.foot-links {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.foot-links .link {
+  color: #10b981;
+  font-weight: 700;
+  text-decoration: none;
+}
+.foot-links .link:hover {
+  text-decoration: underline;
+}
+.foot-links .dot {
+  color: #9ca3af;
+}
+
 @media (max-width: 520px) {
   .grid.two {
     grid-template-columns: 1fr;
   }
   .reg-card {
     padding: 22px;
+  }
+  .reg-foot {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .foot-links {
+    justify-content: center;
   }
 }
