@@ -1,7 +1,8 @@
 // src/admin/pages/AdminLogin.tsx
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AuthApi, type Me } from "../../lib/api";
+// import { AuthApi, type Me } from "../../lib/api";
+import { AdminApi, type Me } from "../../lib/api";
 import { useAuth } from "../../lib/auth-context";
 import "../css/login-scoped.css";
 
@@ -32,14 +33,13 @@ export default function AdminLogin() {
     setLoading(true);
     try {
       // 1) Giriş isteği (cookie veya token – backend hangisini veriyorsa)
-      await AuthApi.login({
+      await AdminApi.login({
         emailOrUsername: emailOrUsername.trim(),
-        password: password,
+        password,
         remember,
       });
-
-      // 2) Me çağrısı ile kullanıcıyı çek
-      const me = (await AuthApi.me()) as Me | null;
+      // 2) Kimim?
+      const me = (await AdminApi.me()) as Me | null;
 
       // 3) Admin değilse içeri alma
       if (!me || !["admin", "editor"].includes(String(me.role || ""))) {

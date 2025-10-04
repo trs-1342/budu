@@ -1,6 +1,5 @@
-// src/pages/auth/Register.tsx
 import { useMemo, useState } from "react";
-import "../css/Register.css"; // mevcut css
+import "../css/Register.css";
 import { CustomersApi } from "../lib/api";
 import { COUNTRY_DIALS } from "../lib/countries";
 
@@ -24,7 +23,7 @@ export default function Register() {
     country_dial: "",
     phone: "",
   });
-  const [remember, setRemember] = useState(true); // <-- yeni
+  const [remember, setRemember] = useState(true);
   const [showPw, setShowPw] = useState(false);
   const [touched, setTouched] = useState<Record<keyof FormState, boolean>>({
     username: false,
@@ -329,7 +328,6 @@ export default function Register() {
           {loading ? "Gönderiliyor…" : "Kayıt ol"}
         </button>
 
-        {/* ALT BÖLÜM – İSTEDİKLERİN */}
         <footer className="reg-foot">
           <div className="foot-links">
             <span>Zaten hesabın var mı?</span>

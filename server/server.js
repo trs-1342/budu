@@ -40,7 +40,7 @@ const pool = mysql.createPool({
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const USER_RE = /^[a-zA-Z0-9_.-]{3,64}$/;
-const NAME_RE = /^[\p{L}\s-]+$/u; 
+const NAME_RE = /^[\p{L}\s-]+$/u;
 
 const COURSES_DIR = path.join(__dirname, "courses", "video");
 const JWT_SECRET = process.env.JWT_SECRET || "dev_secret";
@@ -142,17 +142,6 @@ function cookieOpts(maxAgeMs) {
   };
 }
 
-// function signAccess(user) {
-//   return jwt.sign({ sub: user.id, role: user.role }, JWT_ACCESS_SECRET, {
-//     expiresIn: "15m",
-//   });
-// }
-// function signRefresh(user) {
-//   return jwt.sign({ sub: user.id, role: user.role }, JWT_REFRESH_SECRET, {
-//     expiresIn: "7d",
-//   });
-// }
-
 async function getUserById(id) {
   const [rows] = await pool.query(
     "SELECT id, username, email, role, COALESCE(is_active,1) AS is_active FROM users WHERE id = ? LIMIT 1",
@@ -187,72 +176,12 @@ function isEmail(x) {
   return EMAIL_RE.test(String(x || "").toLowerCase());
 }
 
-// function ensureAdmin(req, res, next) {
-//   try {
-//     const bearer = req.headers.authorization?.startsWith("Bearer ")
-//       ? req.headers.authorization.slice(7)
-//       : null;
-//     const token =
-//       bearer || req.cookies?.access || req.cookies?.access_token || null;
-//     if (!token) return res.status(401).json({ error: "Unauthorized" });
-//     const p = verifyAccess(token); // JWT_ACCESS_SECRET ile doğrula
-//     req.user = { id: p.sub, role: req.user?.role };
-//     // rol bilgisini al (sonraki middleware zaten email/role boşsa dolduruyor)
-//     return next();
-//   } catch {
-//     return res.status(401).json({ error: "Unauthorized" });
-//   }
-// }
-
 function ensureAdmin(req, res, next) {
   if (!req.user || req.user.role !== "admin") {
     return res.status(403).json({ error: "Admin gerekli" });
   }
   next();
 }
-
-// async function requireAuth(req, res, next) {
-//   try {
-//     const access = req.cookies?.access;
-//     if (!access) throw new Error("no-access");
-
-//     let payload;
-//     try {
-//       payload = jwt.verify(access, JWT_ACCESS_SECRET);
-//     } catch (e) {
-//       // access expired ise refresh dene
-//       const r = req.cookies?.refresh;
-//       if (!r) return res.status(401).json({ error: "Yetkisiz" });
-//       const rp = jwt.verify(r, JWT_REFRESH_SECRET);
-//       const u = await getUserById(rp.sub);
-//       if (!u) return res.status(401).json({ error: "Yetkisiz" });
-
-//       // pasif engel
-//       if (typeof u.is_active !== "undefined" && Number(u.is_active) === 0) {
-//         res.clearCookie("access", cookieOpts(0));
-//         res.clearCookie("refresh", cookieOpts(0));
-//         return res.status(403).json({ error: "Hesap pasif" });
-//       }
-
-//       const newAccess = signAccess(u);
-//       res.cookie("access", newAccess, cookieOpts(15 * 60 * 1000));
-//       req.user = { id: u.id, role: u.role };
-//       return next();
-//     }
-
-//     const u = await getUserById(payload.sub);
-//     if (!u) return res.status(401).json({ error: "Yetkisiz" });
-
-//     if (typeof u.is_active !== "undefined" && Number(u.is_active) === 0) {
-//       return res.status(403).json({ error: "Hesap pasif" });
-//     }
-
-//     req.user = { id: u.id, role: u.role };
-//     next();
-//   } catch (e) {
-//     return res.status(401).json({ error: "Yetkisiz" });
-//   }
-// }
 
 async function requireAuth(req, res, next) {
   try {
@@ -324,11 +253,6 @@ function safeJoin(root, rel) {
 }
 
 function ensureAdmin(req, res, next) {
-  if (req.user && req.user.id) return next();
-  return res.status(401).json({ error: "Unauthorized" });
-}
-
-function ensureAdmin(req, res, next) {
   if (req.user && (req.user.role === "admin" || req.user.role === "editor"))
     return next();
   return res.status(403).json({ error: "Yasak" });
@@ -374,6 +298,38 @@ function normalizePhone(s = "") {
     .trim()
     .replace(/\D/g, "");
   return s;
+}
+
+function s(x) {
+  return (x ?? "").toString().trim();
+}
+
+function parseIdentifier(src) {
+  const b = src || {};
+  let v = b.emailOrUsername ?? b.email ?? b.username ?? "";
+  v = String(v || "").trim();
+  if (!v) return { kind: null, value: "" };
+
+  const lower = v.toLowerCase();
+
+  // EMAIL_RE / USER_RE zaten dosyada varsa onları kullan; yoksa basit fallback
+  const looksEmail =
+    (typeof EMAIL_RE !== "undefined" && EMAIL_RE.test(lower)) ||
+    lower.includes("@");
+
+  if (looksEmail) {
+    return { kind: "email", value: lower };
+  }
+
+  const usernameOk =
+    (typeof USER_RE !== "undefined" && USER_RE.test(lower)) ||
+    lower.length >= 3;
+
+  if (usernameOk) {
+    return { kind: "username", value: lower };
+  }
+
+  return { kind: null, value: "" };
 }
 
 // health
@@ -560,6 +516,102 @@ app.post(
     });
   })
 );
+
+// Müşteri girişi (customers)
+app.post("/api/customers/login", async (req, res) => {
+  try {
+    // FE şu üç biçimden biriyle gönderir: {emailOrUsername} | {email} | {username}
+    const idf = parseIdentifier(req.body); // { kind: 'email' | 'username' | null, value: string }
+    const password = s(req.body?.password);
+    const remember = !!req.body?.remember;
+
+    if (!idf.kind || !idf.value || !password) {
+      return res.status(400).json({ error: "Eksik alan" });
+    }
+
+    const col = idf.kind === "email" ? "email" : "username";
+    const [rows] = await pool.execute(
+      `SELECT id, username, email, password
+         FROM customers
+        WHERE ${col} = ?
+        LIMIT 1`,
+      [idf.value]
+    );
+
+    if (!Array.isArray(rows) || !rows.length) {
+      return res.status(401).json({ error: "Geçersiz kimlik" });
+    }
+
+    const user = rows[0];
+    const ok = /^\$2[aby]\$/.test(user.password)
+      ? await bcrypt.compare(password, user.password)
+      : password === user.password; // (eski düz kayıt varsa)
+
+    if (!ok) return res.status(401).json({ error: "Geçersiz kimlik" });
+
+    // JWT üret (payload minimal)
+    const payload = { sub: user.id, role: "customer" };
+    const token = signAccess(payload); // ACCESS_TTL'e göre imzalanır
+
+    // İstersen çerez de set edebilirsin (opsiyonel):
+    // res.cookie("access", token, {
+    //   httpOnly: true, sameSite: "lax",
+    //   secure: false, // prod'da true
+    //   maxAge: remember ? ms(process.env.ACCESS_TTL || "10m") : undefined,
+    // });
+
+    return res.json({
+      token,
+      user: { id: user.id, username: user.username, email: user.email },
+    });
+  } catch (err) {
+    console.error("user-login error:", err);
+    return res.status(500).json({ error: "Sunucu hatası" });
+  }
+});
+
+app.get("/api/customers/user-me", async (req, res) => {
+  try {
+    // 1) Authorization: Bearer ... (FE token’ı storage’tan header’a koyuyor)
+    let token = req.headers.authorization?.split(" ")[1];
+
+    // 2) Geriye dönük cookie desteği (opsiyonel)
+    if (!token && req.cookies?.access) token = req.cookies.access;
+
+    if (!token) return res.status(401).json({ error: "Yetkisiz" });
+
+    let payload;
+    try {
+      payload = verifyAccess(token);
+    } catch {
+      return res.status(401).json({ error: "Yetkisiz" });
+    }
+
+    const [rows] = await pool.execute(
+      "SELECT id, username, email FROM customers WHERE id = ? LIMIT 1",
+      [payload.sub]
+    );
+    if (!Array.isArray(rows) || !rows.length) {
+      return res.status(401).json({ error: "Yetkisiz" });
+    }
+
+    // wrapper YOK — doğrudan user dön
+    return res.json(rows[0]);
+  } catch (err) {
+    console.error("user-me error:", err);
+    return res.status(500).json({ error: "Sunucu hatası" });
+  }
+});
+
+app.post("/api/customers/logout", (req, res) => {
+  try {
+    // Token client’ta storage’tan siliniyor; cookie kullandıysan ayrıca temizle:
+    // res.clearCookie("access");
+    return res.json({ ok: true });
+  } catch {
+    return res.json({ ok: true });
+  }
+});
 
 app.get("/api/public/posts", async (req, res) => {
   try {
@@ -1404,11 +1456,6 @@ app.use((req, _res, next) => {
     })
     .catch(() => next());
 });
-
-// Regular expression ile
-// app.get(/^\/courses\/video\//, (req, res) => {
-//   res.status(404).json({ error: "nonononon" });
-// });
 
 // 404
 app.use((_req, res) => res.status(404).json({ error: "Not Found" }));

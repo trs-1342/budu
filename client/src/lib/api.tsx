@@ -1,8 +1,144 @@
+const ENDPOINT = {
+  // Admin
+  adminLogin: "/api/auth/login",
+  adminMe: "/api/auth/me",
+  adminRefresh: "/api/auth/refresh",
+  adminLogout: "/api/auth/logout",
+
+  // User (customers)
+  userRegister: "/api/customers/register",
+  userLogin: "/api/customers/login",
+  userMe: "/api/customers/user-me",
+  userLogout: "/api/customers/logout",
+} as const;
+
 export const API_BASE: string =
   (import.meta as any).env?.VITE_API_BASE || "http://localhost:1002";
 
 /** Eski projelerde kullanılan local/session storage anahtarları */
 const LEGACY_KEYS = ["access", "token"] as const;
+
+export const AdminApi = {
+  async login(payload: {
+    emailOrUsername?: string;
+    email?: string;
+    username?: string;
+    password: string;
+    remember?: boolean;
+  }): Promise<{ user?: Me }> {
+    const r = await apiFetch(ENDPOINT.adminLogin, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const body = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(body?.error || "Giriş başarısız");
+    // admin akışında token beklemiyoruz (httpOnly cookie)
+    return { user: body?.user };
+  },
+
+  async me(): Promise<Me | null> {
+    const r = await apiFetch(ENDPOINT.adminMe);
+    if (!r.ok) return null;
+    const d = await r.json().catch(() => null);
+    return d?.user ?? null;
+  },
+
+  async refresh(): Promise<boolean> {
+    try {
+      const r = await apiFetch(ENDPOINT.adminRefresh, { method: "POST" });
+      if (!r.ok) return false;
+      const d = await r.json().catch(() => ({}));
+      if (d?.token) setToken(d.token, { remember: true });
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
+  async logout(): Promise<void> {
+    try {
+      await apiFetch(ENDPOINT.adminLogout, { method: "POST" });
+    } catch {}
+  },
+};
+
+// --- USER API (customers) ---
+export const UserApi = {
+  async register(payload: {
+    username: string;
+    email: string;
+    password: string;
+    fname?: string;
+    sname?: string;
+    country_dial?: string;
+    phone?: string;
+  }): Promise<{
+    ok: boolean;
+    customer?: { id: number; username: string; email: string };
+  }> {
+    return api(ENDPOINT.userRegister, { method: "POST", body: payload });
+  },
+
+  async login(payload: {
+    emailOrUsername?: string;
+    email?: string;
+    username?: string;
+    password: string;
+    remember?: boolean;
+  }): Promise<{ token?: string; user?: Me }> {
+    const r = await apiFetch(ENDPOINT.userLogin, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const body = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(body?.error || "Giriş başarısız");
+
+    // user akışında token dönebilir → storage'a yaz
+    if (body?.token) setToken(body.token, { remember: !!payload.remember });
+    return { token: body?.token, user: body?.user };
+  },
+
+  async me(): Promise<Me | null> {
+    // user-me, wrapper'sız user döndürür; Bearer gerekli
+    try {
+      const d = await api<Me>(ENDPOINT.userMe, { auth: true });
+      return d ?? null;
+    } catch {
+      return null;
+    }
+  },
+
+  async logout(): Promise<void> {
+    clearToken({ emit: true });
+    try {
+      await apiFetch(ENDPOINT.userLogout, { method: "POST" });
+    } catch {}
+  },
+};
+
+// --- Evrensel "kimim" (context için): önce admin, sonra user dene ---
+export async function whoAmI(): Promise<Me | null> {
+  const t = getToken();
+  if (isJwtValid(t)) {
+    // Geçerli JWT → kesin user akışı
+    return await UserApi.me();
+  }
+  // JWT yok/geçersiz → admin çerezi olabilir
+  const admin = await AdminApi.me();
+  if (admin) return admin;
+
+  // Nadir durum: JWT var ama decode edilemedi → son bir user denemesi
+  if (t) {
+    try {
+      return await UserApi.me();
+    } catch {
+      /* ignore */
+    }
+  }
+  return null;
+}
 
 /** Backward-compat: storage’tan token oku (cookie akışında null dönebilir) */
 export function getToken(): string | null {
@@ -152,7 +288,6 @@ export type Me = {
 
 /** Auth uçları – hem cookie hem legacy token akışı ile uyumlu */
 export const AuthApi = {
-  /** Login – cookie akışında çerez set edilir; token dönerse kaydederiz. */
   async login(payload: {
     emailOrUsername?: string;
     email?: string;
@@ -160,34 +295,26 @@ export const AuthApi = {
     password: string;
     remember?: boolean;
   }): Promise<{ user?: Me }> {
-    // Yeni akış
-    const r = await apiFetch(`/api/auth/login`, {
+    // 1) Admin girişi dene
+    let r = await apiFetch(`/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
-    // Eski backend adlarını da deneyelim (geriye dönük destek)
-    if (r.status === 404) {
-      try {
-        const d = await api(`/api/auth/user-login`, {
-          method: "POST",
-          body: payload,
-          auth: false,
-        });
-        // legacy token dönebilir
-        const token = (d as any)?.token;
-        if (token) setToken(token, { remember: !!payload.remember });
-        return { user: (d as any)?.user };
-      } catch (e: any) {
-        throw new Error(e?.message || "Giriş başarısız");
-      }
+    // 2) Admin başarısızsa (404/401) → user-login dene
+    if (r.status === 404 || r.status === 401) {
+      r = await apiFetch(`/api/auth/user-login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
     }
 
     const body = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(body?.error || "Giriş başarısız");
 
-    // token dönerse (bazı sürümler) saklayalım:
+    // token dönerse sakla (user-login döndürür)
     if (body?.token) setToken(body.token, { remember: !!payload.remember });
 
     return { user: body?.user };
@@ -208,7 +335,7 @@ export const AuthApi = {
     if (r.status === 401) {
       // legacy route
       try {
-        const d = await api<Me>(`/api/account/user-me`);
+        const d = await api<Me>(`/api/customers/user-me`);
         return d;
       } catch {
         return null;
