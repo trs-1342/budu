@@ -236,3 +236,57 @@
     padding-right: 16px;
   }
 }
+
+/* Üyelere özel kapak */
+.locked {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  margin: 12px 0 24px;
+}
+.locked .cover {
+  width: 100%;
+  height: 360px;
+  object-fit: cover;
+  display: block;
+  filter: brightness(0.75);
+}
+.locked-fallback {
+  background: linear-gradient(135deg, #0ea5e9, #22c55e, #9333ea);
+  min-height: 260px;
+}
+.locked .overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 12px;
+  text-align: center;
+  color: #fff;
+  padding: 20px;
+}
+.locked .actions {
+  display: inline-flex;
+  gap: 10px;
+}
+.locked .btn-login,
+.locked .btn-register {
+  display: inline-block;
+  padding: 10px 14px;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 700;
+}
+.locked .btn-login {
+  background: #111827;
+  color: #fff;
+}
+.locked .btn-register {
+  background: #10b981;
+  color: #fff;
+}
+.locked .btn-login:hover,
+.locked .btn-register:hover {
+  filter: brightness(1.05);
+}

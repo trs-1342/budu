@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import "../css/Account.css";
 import { useAuth } from "../lib/auth-context";
 import { UserApi } from "../lib/api";
@@ -67,6 +67,19 @@ export default function Account() {
     localStorage.setItem("theme", theme);
   }, [theme]);
 
+  const [rm, setRm] = useState<{
+    fname?: boolean;
+    sname?: boolean;
+    phone?: boolean;
+  }>({});
+
+  function markRemove(key: keyof typeof rm) {
+    setRm((r) => ({ ...r, [key]: true }));
+  }
+  function unmarkRemove(key: keyof typeof rm) {
+    if (rm[key]) setRm((r) => ({ ...r, [key]: false }));
+  }
+
   // Hesap formu
   const [fname, setFname] = useState("");
   const [sname, setSname] = useState("");
@@ -88,11 +101,26 @@ export default function Account() {
   }, [ready, user, nav]);
 
   // Kullanıcıyı forma serp
+  // useEffect(() => {
+  //   if (!user) return;
+  //   setUsername(user.username ?? "");
+  //   setEmail(user.email ?? "");
+  //   setFname(user.fname ?? "");
+  //   setSname(user.sname ?? "");
+  //   setPhone(user.phone ?? "");
+  //   setCountryDial(user.countryDial ?? "");
+  // }, [user]);
+
   useEffect(() => {
     if (!user) return;
     setUsername(user.username ?? "");
     setEmail(user.email ?? "");
-    // Backend user-me şu an fname/sname/dial/phone dönmüyor olabilir; boş bırakıyoruz.
+    setFname(user.fname ?? "");
+    setSname(user.sname ?? "");
+    setPhone(user.phone ?? "");
+    setCountryDial(
+      (user as any).countryDial ?? (user as any).country_dial ?? ""
+    );
   }, [user]);
 
   // Doğrulamalar
@@ -127,16 +155,95 @@ export default function Account() {
     nav("/login", { replace: true });
   }
 
+  // async function handleSave(e: React.FormEvent) {
+  //   e.preventDefault();
+  //   if (!canSave || saving) return;
+
+  //   setErr(null);
+  //   setMsg(null);
+  //   setSaving(true);
+
+  //   try {
+  //     // normalize + sadece telefon boşsa NULL'a çek
+  //     const payload = {
+  //       fname: fname.trim(),
+  //       sname: sname.trim(),
+  //       username: username.trim(),
+  //       email: email.trim().toLowerCase(),
+  //       phone: phone.trim(), // "" → NULL
+  //       country_dial: phone.trim() ? countryDial : "", // "" → NULL
+  //       ...(password.trim() ? { password: password.trim() } : {}),
+  //     };
+
+  //     const res = await UserApi.updateProfile(payload);
+
+  //     // context'i güncelle, formu temizle/mesaj ver
+  //     setUser(res.user);
+  //     setPassword("");
+  //     setMsg("Bilgilerin güncellendi.");
+  //   } catch (e: any) {
+  //     setErr(e?.message || "Güncelleme başarısız.");
+  //   } finally {
+  //     setSaving(false);
+  //   }
+  // }
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    if (!canSave) return;
+    if (!canSave || saving) return;
+
     setErr(null);
     setMsg(null);
     setSaving(true);
+
     try {
-      // Burada gerçek API çağrısını bağlayacağız (CustomersApi.updateProfile)
-      // Şimdilik sadece arayüz:
-      await new Promise((r) => setTimeout(r, 500));
+      // Sadece değişenleri gönderelim:
+      const payload: any = {};
+
+      // null yapılacaklar (Kaldır tıklandıysa)
+      if (rm.fname) payload.fname = null;
+      if (rm.sname) payload.sname = null;
+      if (rm.phone) {
+        payload.phone = null;
+        payload.country_dial = null;
+      }
+
+      // değiştiyse gönder (ve 'Kaldır' aktif değilse)
+      if (!rm.fname && fname !== (user?.fname ?? ""))
+        payload.fname = fname.trim();
+      if (!rm.sname && sname !== (user?.sname ?? ""))
+        payload.sname = sname.trim();
+      if (username.trim() !== (user?.username ?? ""))
+        payload.username = username.trim();
+      if (email.trim().toLowerCase() !== (user?.email ?? "").toLowerCase())
+        payload.email = email.trim().toLowerCase();
+
+      if (!rm.phone) {
+        const newPhone = phone.trim();
+        const curPhone = user?.phone ?? "";
+        if (newPhone !== curPhone) {
+          payload.phone = newPhone || null; // boş bırakıldıysa da null yap
+          payload.country_dial = newPhone ? countryDial : null;
+        } else if (newPhone && countryDial !== (user as any)?.countryDial) {
+          payload.country_dial = countryDial;
+        }
+      }
+
+      if (password.trim()) payload.password = password.trim();
+
+      // Hiç alan çıkmıyorsa kısa dönüş
+      if (Object.keys(payload).length === 0) {
+        setMsg("Güncellenecek bir değişiklik yok.");
+        setSaving(false);
+        return;
+      }
+
+      const res = await UserApi.updateProfile(payload);
+
+      // context'i güncelle, formu temizle/mesaj ver
+      setUser(res.user);
+      setPassword("");
+      setRm({});
       setMsg("Bilgilerin güncellendi.");
     } catch (e: any) {
       setErr(e?.message || "Güncelleme başarısız.");
@@ -206,16 +313,142 @@ export default function Account() {
             <p className="muted">Profil bilgilerini güncelle.</p>
 
             <form onSubmit={handleSave}>
-              <div className="grid two">
+              {/* <div className="grid two">
                 <div className="form-group">
-                  <label className="label" htmlFor="fname">
-                    Ad
-                  </label>
+                  <div className="label-row">
+                    <label className="label" htmlFor="fname">
+                      Ad
+                    </label>
+                    {(fname || user?.fname) && (
+                      <button
+                        type="button"
+                        className="mini-link"
+                        onClick={() => {
+                          setFname("");
+                          markRemove("fname");
+                        }}
+                        title="Bu alanı kaldır"
+                      >
+                        Kaldır
+                      </button>
+                    )}
+                  </div>
                   <input
                     id="fname"
                     className={`input ${!fnameOk ? "invalid" : ""}`}
                     value={fname}
-                    onChange={(e) => setFname(e.target.value)}
+                    onChange={(e) => {
+                      setFname(e.target.value);
+                      unmarkRemove("fname");
+                    }}
+                    placeholder="Adınız"
+                    autoComplete="given-name"
+                    aria-invalid={!fnameOk}
+                  />
+                  {!fnameOk && (
+                    <div className="hint">Sadece harf, boşluk ve -</div>
+                  )}
+                </div>
+                <div className="form-group">
+                  <div className="label-row">
+                    <label className="label" htmlFor="sname">
+                      Soyad
+                    </label>
+                    {(sname || user?.sname) && (
+                      <button
+                        type="button"
+                        className="mini-link"
+                        onClick={() => {
+                          setSname("");
+                          markRemove("sname");
+                        }}
+                      >
+                        Kaldır
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    id="sname"
+                    className={`input ${!snameOk ? "invalid" : ""}`}
+                    value={sname}
+                    onChange={(e) => {
+                      setSname(e.target.value);
+                      unmarkRemove("sname");
+                    }}
+                    placeholder="Soyadınız"
+                    autoComplete="family-name"
+                    aria-invalid={!snameOk}
+                  />
+                  {!snameOk && (
+                    <div className="hint">Sadece harf, boşluk ve -</div>
+                  )}
+                </div>
+                <div className="form-group">
+                  <div className="label-row">
+                    <label className="label" htmlFor="phone">
+                      Telefon (opsiyonel)
+                    </label>
+                    {(phone || user?.phone) && (
+                      <button
+                        type="button"
+                        className="mini-link"
+                        onClick={() => {
+                          setPhone("");
+                          setCountryDial("");
+                          markRemove("phone");
+                        }}
+                      >
+                        Kaldır
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    id="phone"
+                    className={`input ${!phoneOk ? "invalid" : ""}`}
+                    value={phone}
+                    onChange={(e) => {
+                      setPhone(e.target.value);
+                      unmarkRemove("phone");
+                    }}
+                    placeholder="5xx xxx xx xx"
+                    autoComplete="tel-national"
+                    aria-invalid={!phoneOk}
+                  />
+                  {!phoneOk && (
+                    <div className="hint">Sadece rakam, 6–16 hane</div>
+                  )}
+                </div>
+              </div> */}
+
+              {/* SATIR 1: Ad & Soyad */}
+              <div className="grid two">
+                <div className="form-group">
+                  <div className="label-row">
+                    <label className="label" htmlFor="fname">
+                      Ad
+                    </label>
+                    {(fname || user?.fname) && (
+                      <button
+                        type="button"
+                        className="mini-link"
+                        onClick={() => {
+                          setFname("");
+                          markRemove("fname");
+                        }}
+                        title="Bu alanı kaldır"
+                      >
+                        Kaldır
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    id="fname"
+                    className={`input ${!fnameOk ? "invalid" : ""}`}
+                    value={fname}
+                    onChange={(e) => {
+                      setFname(e.target.value);
+                      unmarkRemove("fname");
+                    }}
                     placeholder="Adınız"
                     autoComplete="given-name"
                     aria-invalid={!fnameOk}
@@ -226,14 +459,31 @@ export default function Account() {
                 </div>
 
                 <div className="form-group">
-                  <label className="label" htmlFor="sname">
-                    Soyad
-                  </label>
+                  <div className="label-row">
+                    <label className="label" htmlFor="sname">
+                      Soyad
+                    </label>
+                    {(sname || user?.sname) && (
+                      <button
+                        type="button"
+                        className="mini-link"
+                        onClick={() => {
+                          setSname("");
+                          markRemove("sname");
+                        }}
+                      >
+                        Kaldır
+                      </button>
+                    )}
+                  </div>
                   <input
                     id="sname"
                     className={`input ${!snameOk ? "invalid" : ""}`}
                     value={sname}
-                    onChange={(e) => setSname(e.target.value)}
+                    onChange={(e) => {
+                      setSname(e.target.value);
+                      unmarkRemove("sname");
+                    }}
                     placeholder="Soyadınız"
                     autoComplete="family-name"
                     aria-invalid={!snameOk}
@@ -244,6 +494,7 @@ export default function Account() {
                 </div>
               </div>
 
+              {/* SATIR 2: Kullanıcı adı & E-posta (zorunlu) */}
               <div className="grid two">
                 <div className="form-group">
                   <label className="label" htmlFor="username">
@@ -258,7 +509,9 @@ export default function Account() {
                     autoComplete="username"
                     aria-invalid={!usernameOk}
                   />
-                  {!usernameOk && <div className="hint">3–64 karakter</div>}
+                  {!usernameOk && (
+                    <div className="hint">3–64 karakter; harf/rakam/._</div>
+                  )}
                 </div>
 
                 <div className="form-group">
@@ -273,13 +526,15 @@ export default function Account() {
                     placeholder="ornek@site.com"
                     autoComplete="email"
                     aria-invalid={!emailOk}
+                    inputMode="email"
                   />
                   {!emailOk && (
-                    <div className="hint">Geçerli e-posta girin</div>
+                    <div className="hint">Geçerli bir e-posta girin</div>
                   )}
                 </div>
               </div>
 
+              {/* SATIR 3: Ülke kodu & Telefon (opsiyonel) */}
               <div className="grid two">
                 <div className="form-group">
                   <label className="label" htmlFor="dial">
@@ -305,17 +560,36 @@ export default function Account() {
                 </div>
 
                 <div className="form-group">
-                  <label className="label" htmlFor="phone">
-                    Telefon (opsiyonel)
-                  </label>
+                  <div className="label-row">
+                    <label className="label" htmlFor="phone">
+                      Telefon (opsiyonel)
+                    </label>
+                    {(phone || (user as any)?.phone) && (
+                      <button
+                        type="button"
+                        className="mini-link"
+                        onClick={() => {
+                          setPhone("");
+                          setCountryDial("");
+                          markRemove("phone");
+                        }}
+                      >
+                        Kaldır
+                      </button>
+                    )}
+                  </div>
                   <input
                     id="phone"
                     className={`input ${!phoneOk ? "invalid" : ""}`}
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) => {
+                      setPhone(e.target.value);
+                      unmarkRemove("phone");
+                    }}
                     placeholder="5xx xxx xx xx"
                     autoComplete="tel-national"
                     aria-invalid={!phoneOk}
+                    inputMode="tel"
                   />
                   {!phoneOk && (
                     <div className="hint">Sadece rakam, 6–16 hane</div>

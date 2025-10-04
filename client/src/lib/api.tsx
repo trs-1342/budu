@@ -9,6 +9,7 @@ const ENDPOINT = {
   userRegister: "/api/customers/register",
   userLogin: "/api/customers/login",
   userMe: "/api/customers/user-me",
+  userProfile: "/api/customers/profile",
   userLogout: "/api/customers/logout",
 } as const;
 
@@ -108,6 +109,22 @@ export const UserApi = {
     } catch {
       return null;
     }
+  },
+
+  async updateProfile(payload: {
+    fname?: string;
+    sname?: string;
+    username?: string;
+    email?: string;
+    country_dial?: string; // phone boşsa "" gönder → NULL
+    phone?: string; // "" → NULL
+    password?: string; // opsiyonel değişim
+  }): Promise<{ ok: boolean; user: Me }> {
+    return api(ENDPOINT.userProfile, {
+      method: "PATCH",
+      body: payload,
+      auth: true, // Bearer ekle
+    });
   },
 
   async logout(): Promise<void> {
@@ -281,6 +298,10 @@ export type Me = {
   id: number;
   username: string;
   email: string;
+  fname?: string;
+  sname?: string;
+  phone?: string;
+  countryDial?: string;
   role?: "admin" | "editor" | "user";
   is_active?: 0 | 1;
   create_at?: string; // DATETIME

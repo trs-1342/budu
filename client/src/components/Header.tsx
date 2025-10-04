@@ -9,7 +9,7 @@ export default function Header() {
   async function handleLogout(e: React.MouseEvent) {
     e.preventDefault();
     await logout();
-    window.location.href = "/login";
+    window.location.href = "/";
   }
 
   return (

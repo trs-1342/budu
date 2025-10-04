@@ -42,6 +42,15 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const USER_RE = /^[a-zA-Z0-9_.-]{3,64}$/;
 const NAME_RE = /^[\p{L}\s-]+$/u;
 
+const CUSTOMER_VIDEO_DIR = path.join(__dirname, "courses", "video");
+app.use(
+  "/courses/video",
+  express.static(CUSTOMER_VIDEO_DIR, {
+    fallthrough: true,
+    acceptRanges: true,
+  })
+);
+
 const COURSES_DIR = path.join(__dirname, "courses", "video");
 const JWT_SECRET = process.env.JWT_SECRET || "dev_secret";
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || "http://localhost:1001";
@@ -280,6 +289,37 @@ function verifyPlayToken(req, res, next) {
   }
 }
 
+// Sadece Authorization header'ından token al (cookie yok!)
+function getCustomerToken(req) {
+  const h = req.headers?.authorization || "";
+  if (h.startsWith("Bearer ")) return h.slice(7).trim();
+  return null;
+}
+
+function verifyCustomerToken(token) {
+  const payload = verifyAccess(token); // mevcut doğrulayıcın
+  if (payload?.role && payload.role !== "customer") {
+    const err = new Error("ROLE_MISMATCH");
+    err.code = "ROLE_MISMATCH";
+    throw err;
+  }
+  return payload;
+}
+
+// Route guard
+function requireCustomer(req, res, next) {
+  const token = getCustomerToken(req);
+  if (!token) return res.status(401).json({ error: "Yetkisiz" });
+  try {
+    req.customer = verifyCustomerToken(token); // admin için req.user kullanıyorsan bile burada req.customer
+    next();
+  } catch (e) {
+    if (e?.code === "ROLE_MISMATCH")
+      return res.status(403).json({ error: "Yasak" });
+    return res.status(401).json({ error: "Yetkisiz" });
+  }
+}
+
 function toMysqlDatetime(d) {
   const pad = (n) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(
@@ -332,6 +372,11 @@ function parseIdentifier(src) {
   return { kind: null, value: "" };
 }
 
+function readAccessToken(req) {
+  const h = req.headers?.authorization || "";
+  if (h.startsWith("Bearer ")) return h.slice(7).trim();
+  return req.cookies?.access || null;
+}
 // health
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
@@ -524,6 +569,8 @@ app.post("/api/customers/login", async (req, res) => {
     const idf = parseIdentifier(req.body); // { kind: 'email' | 'username' | null, value: string }
     const password = s(req.body?.password);
     const remember = !!req.body?.remember;
+    const payload = { sub: user.id, role: "customer" };
+    const token = signAccess(payload);
 
     if (!idf.kind || !idf.value || !password) {
       return res.status(400).json({ error: "Eksik alan" });
@@ -550,8 +597,8 @@ app.post("/api/customers/login", async (req, res) => {
     if (!ok) return res.status(401).json({ error: "Geçersiz kimlik" });
 
     // JWT üret (payload minimal)
-    const payload = { sub: user.id, role: "customer" };
-    const token = signAccess(payload); // ACCESS_TTL'e göre imzalanır
+    // const payload = { sub: user.id, role: "customer" };
+    // const token = signAccess(payload); // ACCESS_TTL'e göre imzalanır
 
     // İstersen çerez de set edebilirsin (opsiyonel):
     // res.cookie("access", token, {
@@ -570,14 +617,175 @@ app.post("/api/customers/login", async (req, res) => {
   }
 });
 
-app.get("/api/customers/user-me", async (req, res) => {
+// app.get("/api/customers/user-me", async (req, res) => {
+//   try {
+//     // 1) Authorization: Bearer ... (FE token’ı storage’tan header’a koyuyor)
+//     let token = req.headers.authorization?.split(" ")[1];
+
+//     // 2) Geriye dönük cookie desteği (opsiyonel)
+//     if (!token && req.cookies?.access) token = req.cookies.access;
+
+//     if (!token) return res.status(401).json({ error: "Yetkisiz" });
+
+//     let payload;
+//     try {
+//       payload = verifyAccess(token);
+//     } catch {
+//       return res.status(401).json({ error: "Yetkisiz" });
+//     }
+
+//     const [rows] = await pool.execute(
+//       "SELECT * FROM customers WHERE id = ? LIMIT 1",
+//       [payload.sub]
+//     );
+//     if (!Array.isArray(rows) || !rows.length) {
+//       return res.status(401).json({ error: "Yetkisiz" });
+//     }
+
+//     // wrapper YOK — doğrudan user dön
+//     return res.json(rows[0]);
+//   } catch (err) {
+//     console.error("user-me error:", err);
+//     return res.status(500).json({ error: "Sunucu hatası" });
+//   }
+// });
+
+// PATCH /api/customers/profile  → { ok, user }
+// app.patch("/api/customers/profile", async (req, res) => {
+//   try {
+//     const token = readAccessToken(req);
+//     if (!token) return res.status(401).json({ error: "Yetkisiz" });
+
+//     let payload;
+//     try {
+//       payload = verifyAccess(token);
+//     } catch {
+//       return res.status(401).json({ error: "Yetkisiz" });
+//     }
+//     const uid = payload.sub;
+
+//     const { fname, sname, username, email, country_dial, phone, password } =
+//       req.body || {};
+
+//     // normalize
+//     const s = (v) => (typeof v === "string" ? v.trim() : "");
+//     const u = s(username);
+//     const e = s(email).toLowerCase();
+//     const cd = s(country_dial);
+//     const phDigits = s(phone).replace(/\D/g, "");
+
+//     // validasyon (gönderilen alanlar için)
+//     if (username !== undefined && !USER_RE.test(u)) {
+//       return res.status(400).json({ error: "Geçersiz kullanıcı adı" });
+//     }
+//     if (email !== undefined && !EMAIL_RE.test(e)) {
+//       return res.status(400).json({ error: "Geçersiz e-posta" });
+//     }
+//     if (phone !== undefined) {
+//       if (!phDigits) {
+//         // telefon temizlenecekse ülke kodunu da temizleriz
+//       } else {
+//         if (phDigits.length < 6 || phDigits.length > 16)
+//           return res.status(400).json({ error: "Telefon 6–16 hane olmalı" });
+//         if (!cd) return res.status(400).json({ error: "Ülke kodu gerekli" });
+//       }
+//     }
+//     if (password !== undefined) {
+//       if (
+//         typeof password !== "string" ||
+//         password.length < 6 ||
+//         password.length > 72
+//       )
+//         return res.status(400).json({ error: "Parola 6–72 karakter olmalı" });
+//     }
+
+//     // benzersizlik
+//     if (username !== undefined || email !== undefined) {
+//       const [dups] = await pool.query(
+//         "SELECT id FROM customers WHERE (username = ? AND ? IS NOT NULL) OR (email = ? AND ? IS NOT NULL) AND id <> ? LIMIT 1",
+//         [u, username ?? null, e, email ?? null, uid]
+//       );
+//       if (Array.isArray(dups) && dups.length)
+//         return res
+//           .status(409)
+//           .json({ error: "Kullanıcı adı veya e-posta kullanımda" });
+//     }
+
+//     // dinamik SET
+//     const set = [],
+//       vals = [];
+//     if (fname !== undefined) {
+//       set.push("fname = ?");
+//       vals.push(s(fname) || null);
+//     }
+//     if (sname !== undefined) {
+//       set.push("sname = ?");
+//       vals.push(s(sname) || null);
+//     }
+//     if (username !== undefined) {
+//       set.push("username = ?");
+//       vals.push(u);
+//     }
+//     if (email !== undefined) {
+//       set.push("email = ?");
+//       vals.push(e);
+//     }
+//     if (phone !== undefined) {
+//       if (!phDigits) {
+//         set.push("phone = NULL"); // temizle
+//         set.push("country_dial = NULL");
+//       } else {
+//         set.push("phone = ?");
+//         vals.push(phDigits);
+//         set.push("country_dial = ?");
+//         vals.push(cd.startsWith("+") ? cd : `+${cd}`);
+//       }
+//     }
+//     if (password !== undefined) {
+//       const hash = await bcrypt.hash(String(password), 10);
+//       set.push("password = ?");
+//       vals.push(hash);
+//     }
+
+//     if (!set.length) return res.json({ ok: true }); // değişiklik yok
+
+//     vals.push(uid);
+//     await pool.query(
+//       `UPDATE customers SET ${set.join(", ")} WHERE id = ?`,
+//       vals
+//     );
+
+//     const [rows] = await pool.query(
+//       "SELECT id, username, email, fname, sname, country_dial AS countryDial, phone FROM customers WHERE id = ? LIMIT 1",
+//       [uid]
+//     );
+//     return res.json({ ok: true, user: rows[0] });
+//   } catch (err) {
+//     console.error("profile update error:", err);
+//     return res.status(500).json({ error: "Sunucu hatası" });
+//   }
+// });
+
+app.get("/api/customers/user-me", requireCustomer, async (req, res) => {
   try {
-    // 1) Authorization: Bearer ... (FE token’ı storage’tan header’a koyuyor)
-    let token = req.headers.authorization?.split(" ")[1];
+    const uid = req.customer.sub;
+    const [rows] = await pool.execute(
+      `SELECT id, username, email, fname, sname, country_dial AS countryDial, phone
+         FROM customers WHERE id = ? LIMIT 1`,
+      [uid]
+    );
+    if (!rows.length) return res.status(401).json({ error: "Yetkisiz" });
+    return res.json(rows[0]); // wrapper yok
+  } catch (err) {
+    console.error("customers user-me error:", err);
+    return res.status(500).json({ error: "Sunucu hatası" });
+  }
+});
 
-    // 2) Geriye dönük cookie desteği (opsiyonel)
-    if (!token && req.cookies?.access) token = req.cookies.access;
-
+app.patch("/api/customers/profile", requireCustomer, async (req, res) => {
+  try {
+    const uid = req.customer.sub;
+    const token = readAccessToken(req);
     if (!token) return res.status(401).json({ error: "Yetkisiz" });
 
     let payload;
@@ -586,19 +794,152 @@ app.get("/api/customers/user-me", async (req, res) => {
     } catch {
       return res.status(401).json({ error: "Yetkisiz" });
     }
+    // const uid = payload.sub;
 
-    const [rows] = await pool.execute(
-      "SELECT id, username, email FROM customers WHERE id = ? LIMIT 1",
-      [payload.sub]
+    // Mevcut kullanıcıyı al
+    const [curRows] = await pool.query(
+      "SELECT id, username, email, fname, sname, country_dial, phone FROM customers WHERE id = ? LIMIT 1",
+      [uid]
     );
-    if (!Array.isArray(rows) || !rows.length) {
-      return res.status(401).json({ error: "Yetkisiz" });
+    if (!curRows.length) return res.status(401).json({ error: "Yetkisiz" });
+    const current = curRows[0];
+
+    // Gövde
+    const { fname, sname, username, email, country_dial, phone, password } =
+      req.body || {};
+
+    const s = (v) => (typeof v === "string" ? v.trim() : "");
+    const normDial = (d) => {
+      if (!d) return "";
+      const t = String(d).trim();
+      return t.startsWith("+") ? t : `+${t.replace(/^\+/, "")}`;
+    };
+
+    const u = username !== undefined ? s(username).toLowerCase() : undefined;
+    const e = email !== undefined ? s(email).toLowerCase() : undefined;
+    const cd = country_dial !== undefined ? normDial(country_dial) : undefined;
+    const ph = phone !== undefined ? s(phone).replace(/\D/g, "") : undefined;
+
+    // Validasyon (yalnız gönderilen alanlar)
+    if (u !== undefined && !USER_RE.test(u)) {
+      return res.status(400).json({ error: "Geçersiz kullanıcı adı" });
+    }
+    if (e !== undefined && !EMAIL_RE.test(e)) {
+      return res.status(400).json({ error: "Geçersiz e-posta" });
+    }
+    if (ph !== undefined) {
+      if (ph && (ph.length < 6 || ph.length > 16)) {
+        return res.status(400).json({ error: "Telefon 6–16 hane olmalı" });
+      }
+      if (ph && !cd) {
+        return res.status(400).json({ error: "Ülke kodu gerekli" });
+      }
+    }
+    if (password !== undefined) {
+      const p = String(password);
+      if (p.length && (p.length < 6 || p.length > 72)) {
+        return res.status(400).json({ error: "Parola 6–72 karakter olmalı" });
+      }
     }
 
-    // wrapper YOK — doğrudan user dön
-    return res.json(rows[0]);
+    // Hangi alan gerçekten değişiyor?
+    const wantUsername =
+      u !== undefined && u !== String(current.username).toLowerCase();
+    const wantEmail =
+      e !== undefined && e !== String(current.email).toLowerCase();
+    const wantFname = fname !== undefined && s(fname) !== (current.fname ?? "");
+    const wantSname = sname !== undefined && s(sname) !== (current.sname ?? "");
+    const wantPhone = phone !== undefined; // boş gönderme = sil
+    const wantPass = password !== undefined && String(password).length > 0;
+
+    // Hiç değişiklik yoksa
+    if (
+      !wantUsername &&
+      !wantEmail &&
+      !wantFname &&
+      !wantSname &&
+      !wantPhone &&
+      !wantPass
+    ) {
+      return res.json({ ok: true, user: current });
+    }
+
+    // ÇAKIŞMA KONTROLÜ — ayrı ayrı ve id <> ?
+    if (wantUsername) {
+      const [du1] = await pool.query(
+        "SELECT id FROM customers WHERE username = ? AND id <> ? LIMIT 1",
+        [u, uid]
+      );
+      if (du1.length)
+        return res.status(409).json({ error: "Kullanıcı adı kullanımda" });
+    }
+    if (wantEmail) {
+      const [du2] = await pool.query(
+        "SELECT id FROM customers WHERE email = ? AND id <> ? LIMIT 1",
+        [e, uid]
+      );
+      if (du2.length)
+        return res.status(409).json({ error: "E-posta kullanımda" });
+    }
+
+    // Dinamik UPDATE
+    const set = [];
+    const vals = [];
+
+    if (wantFname) {
+      set.push("fname = ?");
+      vals.push(s(fname) || null);
+    }
+    if (wantSname) {
+      set.push("sname = ?");
+      vals.push(s(sname) || null);
+    }
+    if (wantUsername) {
+      set.push("username = ?");
+      vals.push(u);
+    }
+    if (wantEmail) {
+      set.push("email = ?");
+      vals.push(e);
+    }
+
+    if (wantPhone) {
+      if (!ph) {
+        set.push("phone = NULL");
+        set.push("country_dial = NULL");
+      } else {
+        set.push("phone = ?");
+        vals.push(ph);
+        set.push("country_dial = ?");
+        vals.push(cd);
+      }
+    }
+
+    if (wantPass) {
+      const hash = await bcrypt.hash(String(password), 10);
+      set.push("password = ?");
+      vals.push(hash);
+    }
+
+    if (set.length) {
+      vals.push(uid);
+      await pool.query(
+        `UPDATE customers SET ${set.join(", ")} WHERE id = ?`,
+        vals
+      );
+    }
+
+    const [rows] = await pool.query(
+      "SELECT id, username, email, fname, sname, country_dial AS countryDial, phone FROM customers WHERE id = ? LIMIT 1",
+      [uid]
+    );
+    return res.json({ ok: true, user: rows[0] });
+    // } catch (err) {
+    //   console.error("profile update error:", err);
+    //   return res.status(500).json({ error: "Sunucu hatası" });
+    // }
   } catch (err) {
-    console.error("user-me error:", err);
+    console.error("profile update error:", err);
     return res.status(500).json({ error: "Sunucu hatası" });
   }
 });
@@ -1203,15 +1544,52 @@ app.delete(
   })
 );
 
-app.get("/api/courses", requireAuth, async (req, res) => {
+// app.get("/api/courses", requireAuth, async (req, res) => {
+//   try {
+//     const [rows] = await pool.query(
+//       "SELECT id, title, detail, video_url, created_at FROM courses ORDER BY id DESC"
+//     );
+//     res.json(rows);
+//   } catch (e) {
+//     console.error(e);
+//     res.status(500).json({ error: "courses_list_fail" });
+//   }
+// });
+
+app.get("/api/courses", requireCustomer, async (req, res) => {
   try {
-    const [rows] = await pool.query(
-      "SELECT id, title, detail, video_url, created_at FROM courses ORDER BY id DESC"
-    );
-    res.json(rows);
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: "courses_list_fail" });
+    const allow = new Set([".mp4", ".webm", ".m3u8"]);
+    if (!fs.existsSync(CUSTOMER_VIDEO_DIR)) return res.json([]);
+
+    const files = await fs.promises.readdir(CUSTOMER_VIDEO_DIR);
+    const list = [];
+    for (const name of files) {
+      const ext = path.extname(name).toLowerCase();
+      if (!allow.has(ext)) continue;
+      const abs = path.join(CUSTOMER_VIDEO_DIR, name);
+      const st = await fs.promises.stat(abs).catch(() => null);
+      if (!st?.isFile()) continue;
+
+      const title = name
+        .replace(ext, "")
+        .replace(/[_\-]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+
+      list.push({
+        id: st.ino,
+        title,
+        detail: null,
+        video_url: `/courses/video/${encodeURIComponent(name)}`,
+        created_at: st.mtime.toISOString(),
+      });
+    }
+    list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    return res.json(list);
+  } catch (err) {
+    console.error("courses list error:", err);
+    return res.status(500).json({ error: "Sunucu hatası" });
   }
 });
 

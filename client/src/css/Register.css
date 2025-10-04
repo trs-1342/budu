@@ -62,12 +62,14 @@
   box-sizing: border-box;
 }
 .input:focus {
-  border-color: #10b981; /* yeşil ton */
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+  border-color: #10b981 !important; /* yeşil ton */
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15) !important;
+  border-radius: 10px !important;
 }
 .input.invalid {
   border-color: #ef4444;
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+  border-radius: 10px !important;
 }
 
 .password-row {
@@ -118,7 +120,8 @@
 }
 
 .btn.primary {
-  background: #10b981; /* yeşil */
+  background: #10b981 !important; /* yeşil */
+  border-radius: 10px;
   color: #fff;
 }
 .btn.primary:hover {

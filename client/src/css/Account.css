@@ -309,3 +309,24 @@ button[disabled],
   background: rgba(20, 184, 166, 0.25);
   color: var(--ink);
 }
+
+/* kaldi button */
+
+/* Label ve 'Kaldır'ı aynı sırada tut */
+.label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.mini-link {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+.mini-link:hover {
+  color: var(--danger);
+}

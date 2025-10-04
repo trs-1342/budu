@@ -136,6 +136,11 @@ export default function Register() {
         <header className="reg-head">
           <h1 className="reg-title">Hesap Oluştur</h1>
           <p className="reg-sub">Topluluğa katıl, tek tıkla kurslara başla.</p>
+            <div style={{ marginTop: 8, fontSize: 14, color: "#aaa", textDecoration: "none" }}>
+            <a href="/" className="home-link">
+              ← Anasayfa
+            </a>
+          </div>
         </header>
 
         <div className="grid two">
