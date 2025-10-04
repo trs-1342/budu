@@ -40,6 +40,7 @@ const pool = mysql.createPool({
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const USER_RE = /^[a-zA-Z0-9_.-]{3,64}$/;
+const NAME_RE = /^[\p{L}\s-]+$/u; 
 
 const COURSES_DIR = path.join(__dirname, "courses", "video");
 const JWT_SECRET = process.env.JWT_SECRET || "dev_secret";
@@ -362,46 +363,17 @@ function toMysqlDatetime(d) {
   )}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
-function s(x) {
-  return (x ?? "").toString().trim();
+function normalizeDial(s = "") {
+  s = String(s || "").trim();
+  if (!s) return "";
+  if (!s.startsWith("+")) s = "+" + s.replace(/^\+?0+/, "");
+  return s.replace(/\s/g, "");
 }
-
-function normDial(dial) {
-  const raw = s(dial).replace(/[^\d+]/g, "");
-  if (!raw) return null;
-  const withPlus = raw.startsWith("+") ? raw : "+" + raw;
-  const digits = withPlus.replace(/\D/g, "");
-  if (digits.length < 1 || digits.length > 5) return null; // +90, +1, +971 vb.
-  return withPlus;
-}
-
-function joinPhone(countryDial, local) {
-  const cd = normDial(countryDial);
-  const localDigits = s(local).replace(/\D/g, "");
-  if (!cd || !localDigits) return null; // opsiyonel alanlar
-  return (cd + localDigits).slice(0, 32); // tablo sınırı
-}
-
-async function isUserOrEmailTaken(pool, username, email) {
-  const [rows] = await pool.execute(
-    "SELECT id FROM customers WHERE username = ? OR email = ? LIMIT 1",
-    [username, email]
-  );
-  return Array.isArray(rows) && rows.length > 0;
-}
-
-function parseIdentifier(body) {
-  // FE şu üç isimden birini gönderebilir:
-  // { emailOrUsername } | { email } | { username }
-  const emailOrUsername = s(
-    body?.emailOrUsername || body?.email || body?.username
-  );
-  if (!emailOrUsername) return { kind: null, value: "" };
-
-  if (EMAIL_RE.test(emailOrUsername.toLowerCase())) {
-    return { kind: "email", value: emailOrUsername.toLowerCase() };
-  }
-  return { kind: "username", value: emailOrUsername.toLowerCase() };
+function normalizePhone(s = "") {
+  s = String(s || "")
+    .trim()
+    .replace(/\D/g, "");
+  return s;
 }
 
 // health
@@ -510,6 +482,84 @@ app.post("/api/auth/logout", (req, res) => {
   res.clearCookie("refresh", cookieOpts(0));
   res.json({ ok: true });
 });
+
+app.post(
+  "/api/customers/register",
+  wrap(async (req, res) => {
+    const {
+      username = "",
+      email = "",
+      password = "",
+      fname = "",
+      sname = "",
+      country_dial = "",
+      phone = "",
+    } = req.body || {};
+
+    const u = String(username).trim();
+    const e = String(email).trim().toLowerCase();
+    const p = String(password);
+
+    if (!USER_RE.test(u)) {
+      return res
+        .status(400)
+        .json({ error: "Geçersiz kullanıcı adı (3–64, harf/rakam/_/. )" });
+    }
+    if (!EMAIL_RE.test(e)) {
+      return res.status(400).json({ error: "Geçersiz e-posta" });
+    }
+    if (p.length < 6 || p.length > 72) {
+      return res.status(400).json({ error: "Parola 6–72 karakter olmalı" });
+    }
+
+    const dial = normalizeDial(country_dial);
+    const phoneDigits = normalizePhone(phone);
+    if (phoneDigits && (phoneDigits.length < 6 || phoneDigits.length > 16)) {
+      return res.status(400).json({ error: "Telefon 6–16 hane olmalı" });
+    }
+    if (phoneDigits && !dial) {
+      return res
+        .status(400)
+        .json({ error: "Telefon girildiyse ülke kodu gerekli" });
+    }
+
+    // benzersizlik kontrolü
+    const [dups] = await pool.query(
+      "SELECT username, email FROM customers WHERE username = ? OR email = ? LIMIT 1",
+      [u, e]
+    );
+    if (dups.length) {
+      const taken = dups[0];
+      if (taken.username === u)
+        return res.status(409).json({ error: "Kullanıcı adı kullanılıyor" });
+      if (taken.email === e)
+        return res.status(409).json({ error: "E-posta kullanılıyor" });
+    }
+
+    const hash = await bcrypt.hash(p, 10);
+
+    // kaydet
+    const [ins] = await pool.query(
+      `INSERT INTO customers
+     (username, email, password, fname, sname, country_dial, phone)
+     VALUES (?,?,?,?,?,?,?)`,
+      [
+        u,
+        e,
+        hash,
+        String(fname || "").trim(),
+        String(sname || "").trim(),
+        dial || null,
+        phoneDigits || null,
+      ]
+    );
+
+    return res.status(201).json({
+      ok: true,
+      customer: { id: ins.insertId, username: u, email: e },
+    });
+  })
+);
 
 app.get("/api/public/posts", async (req, res) => {
   try {

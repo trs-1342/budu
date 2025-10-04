@@ -1,6 +1,7 @@
 // src/pages/auth/Register.tsx
 import { useMemo, useState } from "react";
 import "../css/Register.css"; // mevcut css
+import { CustomersApi } from "../lib/api";
 import { COUNTRY_DIALS } from "../lib/countries";
 
 type FormState = {
@@ -35,6 +36,21 @@ export default function Register() {
     phone: false,
   });
 
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [okMsg, setOkMsg] = useState<string | null>(null);
+
+  const NAME_RE = /^[\p{L}\s]+$/u;
+
+  const fnameOk = useMemo(
+    () => !f.fname || NAME_RE.test(f.fname.trim()),
+    [f.fname]
+  );
+  const snameOk = useMemo(
+    () => !f.sname || NAME_RE.test(f.sname.trim()),
+    [f.sname]
+  );
+
   const emailOk = useMemo(
     () => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim()),
     [f.email]
@@ -65,7 +81,14 @@ export default function Register() {
   );
   const phonePlaceholder = selectedCountry?.placeholder || "Telefon";
 
-  const formOk = usernameOk && emailOk && passwordOk && phoneOk && dialOk;
+  const formOk =
+    usernameOk &&
+    emailOk &&
+    passwordOk &&
+    phoneOk &&
+    dialOk &&
+    fnameOk &&
+    snameOk;
 
   function set<K extends keyof FormState>(key: K, val: FormState[K]) {
     setF((s) => ({ ...s, [key]: val }));
@@ -74,11 +97,40 @@ export default function Register() {
     setTouched((t) => ({ ...t, [key]: true }));
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    // Şimdilik sadece UI. Backend’i bağlayınca remember + kayıt akışı eklenecek.
-  }
+    if (!formOk || loading) return;
 
+    setErr(null);
+    setOkMsg(null);
+    setLoading(true);
+    try {
+      await CustomersApi.register({
+        username: f.username.trim(),
+        email: f.email.trim(),
+        password: f.password,
+        fname: f.fname.trim(),
+        sname: f.sname.trim(),
+        country_dial: f.country_dial || undefined,
+        phone: f.phone || undefined,
+      });
+
+      setOkMsg("Hesap oluşturuldu! Giriş yapabilirsiniz.");
+      setF({
+        username: "",
+        email: "",
+        password: "",
+        fname: "",
+        sname: "",
+        country_dial: "",
+        phone: "",
+      });
+    } catch (e: any) {
+      setErr(e?.message || "Kayıt başarısız.");
+    } finally {
+      setLoading(false);
+    }
+  }
   return (
     <div className="register-scope">
       <form className="reg-card" onSubmit={handleSubmit} noValidate>
@@ -94,27 +146,40 @@ export default function Register() {
             </label>
             <input
               id="fname"
-              className="input"
+              className={`input ${touched.fname && !fnameOk ? "invalid" : ""}`}
               placeholder="Adınız"
               value={f.fname}
               onBlur={() => onBlur("fname")}
               onChange={(e) => set("fname", e.target.value)}
               autoComplete="given-name"
+              aria-invalid={touched.fname && !fnameOk}
             />
+            {touched.fname && !fnameOk && (
+              <div className="hint">
+                Sadece harf, boşluk ve <b>-</b> kullanabilirsiniz.
+              </div>
+            )}
           </div>
+
           <div className="form-group">
             <label className="label" htmlFor="sname">
               Soyad
             </label>
             <input
               id="sname"
-              className="input"
+              className={`input ${touched.sname && !snameOk ? "invalid" : ""}`}
               placeholder="Soyadınız"
               value={f.sname}
               onBlur={() => onBlur("sname")}
               onChange={(e) => set("sname", e.target.value)}
               autoComplete="family-name"
+              aria-invalid={touched.sname && !snameOk}
             />
+            {touched.sname && !snameOk && (
+              <div className="hint">
+                Sadece harf ve boşluk kullanabilirsiniz.
+              </div>
+            )}
           </div>
         </div>
 
@@ -244,34 +309,32 @@ export default function Register() {
           </div>
         </div>
 
+        <label className="remember">
+          <input
+            type="checkbox"
+            checked={remember}
+            onChange={(e) => setRemember(e.target.checked)}
+          />
+          Beni hatırla
+        </label>
+
+        {err && <div className="error">{err}</div>}
+        {okMsg && <div className="success">{okMsg}</div>}
+
         <button
           className="btn primary"
           type="submit"
-          disabled={!formOk}
-          title="Kayıt ol"
+          disabled={!formOk || loading}
         >
-          Kayıt ol
+          {loading ? "Gönderiliyor…" : "Kayıt ol"}
         </button>
 
         {/* ALT BÖLÜM – İSTEDİKLERİN */}
         <footer className="reg-foot">
-          <label className="remember">
-            <input
-              type="checkbox"
-              checked={remember}
-              onChange={(e) => setRemember(e.target.checked)}
-            />
-            Beni hatırla
-          </label>
-
           <div className="foot-links">
             <span>Zaten hesabın var mı?</span>
             <a href="/login" className="link">
               Giriş yap
-            </a>
-            <span className="dot">·</span>
-            <a href="/forgot" className="link">
-              Şifremi unuttum
             </a>
           </div>
         </footer>

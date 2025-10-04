@@ -1,6 +1,3 @@
-// src/lib/api.tsx
-// Merkezi API yardımcıları – cookie tabanlı akış + eski token tabanlı akışla uyum shimleri
-
 export const API_BASE: string =
   (import.meta as any).env?.VITE_API_BASE || "http://localhost:1002";
 
@@ -220,5 +217,26 @@ export const AuthApi = {
     if (!r.ok) return null;
     const d = await r.json().catch(() => null);
     return d?.user ?? null;
+  },
+};
+
+// kullanici kayit
+export const CustomersApi = {
+  async register(payload: {
+    username: string;
+    email: string;
+    password: string;
+    fname?: string;
+    sname?: string;
+    country_dial?: string;
+    phone?: string;
+  }): Promise<{
+    ok: boolean;
+    customer?: { id: number; username: string; email: string };
+  }> {
+    return api(`/api/customers/register`, {
+      method: "POST",
+      body: payload,
+    });
   },
 };

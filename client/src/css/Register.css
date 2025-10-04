@@ -196,6 +196,21 @@
   color: #9ca3af;
 }
 
+.error {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  color: #b91c1c;
+  background: #fee2e2;
+}
+.success {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  color: #065f46;
+  background: #d1fae5;
+}
+
 @media (max-width: 520px) {
   .grid.two {
     grid-template-columns: 1fr;

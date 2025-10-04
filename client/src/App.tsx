@@ -126,8 +126,8 @@ import Courses from "./pages/Courses";
 import CoursesWatch from "./pages/CoursesWatch";
 import MyProducts from "./pages/MyProducts";
 import PostDetail from "./pages/PostDetail";
-import Login from "./pages/Login";
 import Register from "./pages/Register";
+import Login from "./pages/Login";
 
 // ADMIN PAGES
 import AdminLogin from "./admin/pages/AdminLogin";
