@@ -1,181 +1,165 @@
-/* src/pages/auth/Register.css */
-
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap");
-
-#register {
+.register-scope {
   min-height: 100dvh;
   display: grid;
   place-items: center;
   padding: 24px;
-  background-color: #0a0a0f;
+  background: #f5f7fb;
+  font-family: "Inter", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+.register-scope * {
+  font-family: inherit;
 }
 
-#register,
-#register * {
-  font-family: "Inter", sans-serif;
-  color: #e2e6ee;
-}
-
-#register form {
+.reg-card {
   width: 100%;
-  max-width: 520px;
-  background-color: #12141a;
-  border: 1px solid #2e323e;
-  border-radius: 16px;
-  padding: 32px;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
-  display: grid;
-  gap: 18px;
+  max-width: 560px;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  padding: 28px;
+  box-sizing: border-box;
 }
 
-#register h1 {
-  margin: 0 0 12px;
-  font-size: 24px;
+.reg-head {
+  margin-bottom: 18px;
+}
+.reg-title {
+  margin: 0 0 6px 0;
+  font-size: 26px;
+  line-height: 1.2;
+  color: #0e1116;
   font-weight: 800;
-  text-align: center;
-  color: #ffffff;
+}
+.reg-sub {
+  margin: 0;
+  color: #4b5563;
+  font-size: 14px;
 }
 
-#register label {
+.form-group {
+  margin: 12px 0;
+}
+
+.label {
+  display: block;
   font-size: 13px;
+  color: #111827;
+  margin: 0 0 6px 0;
   font-weight: 600;
-  color: #9ca3af;
+  text-decoration: none; /* <- alt çizgi yok */
+  border-bottom: none; /* <- çizgi/stil kalıntısı varsa sıfırla */
 }
 
-#register input[type="text"],
-#register input[type="email"],
-#register input[type="password"],
-#register input[type="tel"],
-#register select {
+.input {
   width: 100%;
-  background-color: #1a1c23;
-  border: 1px solid #3a3d47;
-  color: #f1f5f9;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
   padding: 12px 14px;
   font-size: 14px;
-  font-weight: 600;
-  border-radius: 12px;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-#register input:focus,
-#register select:focus {
+  background: #fff;
   outline: none;
-  border-color: #34d399;
-  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.3);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
+}
+.input:focus {
+  border-color: #10b981; /* yeşil ton */
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+.input.invalid {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
 }
 
-#register input::placeholder {
-  color: #6b7280;
-  opacity: 1;
-}
-
-#register .grid {
+.password-row {
   display: grid;
-  gap: 14px;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
 }
-
-#register .grid-cols-2 {
-  grid-template-columns: repeat(2, 1fr);
-}
-
-#register .grid-cols-\[110px_1fr\] {
-  grid-template-columns: 110px 1fr;
-}
-
-@media (max-width: 600px) {
-  #register .grid-cols-2,
-  #register .grid-cols-\[110px_1fr\] {
-    grid-template-columns: 1fr;
-  }
-}
-
-#register .relative {
-  position: relative;
-}
-
-#register .eye {
-  position: absolute;
-  top: 50%;
-  right: 12px;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  color: #9ca3af;
-  font-size: 18px;
+.toggle-btn {
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  border-radius: 10px;
+  padding: 0 12px;
+  height: 42px;
   cursor: pointer;
 }
-
-#register .eye:hover {
-  color: #e2e6ee;
+.toggle-btn:hover {
+  background: #f9fafb;
 }
 
-#register .help {
+.grid.two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.hint {
+  margin-top: 6px;
   font-size: 12px;
-  color: #71717a;
-  margin-top: 4px;
+  color: #b91c1c;
 }
 
-#register .text-red-400 {
-  background-color: #3f1d1d;
-  color: #f87171;
-  padding: 10px;
-  border-radius: 8px;
-  font-size: 13px;
-  border: 1px solid #7f1d1d;
-}
-
-#register .text-emerald-400 {
-  background-color: #1c342b;
-  color: #6ee7b7;
-  padding: 10px;
-  border-radius: 8px;
-  font-size: 13px;
-  border: 1px solid #065f46;
-}
-
-#register button[type="submit"] {
+.btn {
   width: 100%;
-  padding: 14px;
-  background: linear-gradient(to bottom, #34d399, #059669);
-  color: #0f172a;
+  height: 46px;
+  border: none;
+  border-radius: 12px;
   font-weight: 700;
   font-size: 15px;
-  border: none;
-  border-radius: 12px;
   cursor: pointer;
-  transition: all 0.2s ease-in-out;
+  transition: transform 0.06s ease, filter 0.15s ease, background 0.15s ease;
+  margin-top: 8px;
+  font-family: inherit !important;
 }
-
-#register button[type="submit"]:hover {
-  filter: brightness(1.1);
-}
-
-#register button[disabled] {
-  opacity: 0.6;
+.btn:disabled {
+  filter: grayscale(0.35) brightness(0.95);
   cursor: not-allowed;
 }
 
-#register .below {
-  text-align: center;
-  font-size: 14px;
-  color: #9ca3af;
-  margin-top: 8px;
+.btn.primary {
+  background: #10b981; /* yeşil */
+  color: #fff;
+}
+.btn.primary:hover {
+  filter: brightness(1.02);
+}
+.btn.primary:active {
+  transform: translateY(1px);
 }
 
-#register .link {
-  color: #60a5fa;
+.btn.dark {
+  background: #111827; /* siyah-ton */
+  color: #fff;
+}
+.btn.dark:hover {
+  filter: brightness(1.06);
+}
+
+.reg-foot {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+  margin-top: 12px;
+  color: #6b7280;
+  font-size: 14px;
+}
+.reg-foot .link {
+  color: #10b981;
   font-weight: 700;
   text-decoration: none;
-  margin-left: 4px;
 }
-
-#register .link:hover {
+.reg-foot .link:hover {
   text-decoration: underline;
 }
 
-#register .country-code-input {
-  background-color: #1a1c23;
-  color: #f1f5f9;
-  border: 1px solid #3a3d47;
+/* küçük ekran düzeni */
+@media (max-width: 520px) {
+  .grid.two {
+    grid-template-columns: 1fr;
+  }
+  .reg-card {
+    padding: 22px;
+  }
 }

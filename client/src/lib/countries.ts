@@ -6,7 +6,7 @@ export type Country = {
   placeholder?: string;
 };
 
-export const COUNTRIES: Country[] = [
+export const COUNTRY_DIALS: Country[] = [
   // — Özel maskeli örnekler
   {
     code: "TR",
