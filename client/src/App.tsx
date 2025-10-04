@@ -126,6 +126,8 @@ import Courses from "./pages/Courses";
 import CoursesWatch from "./pages/CoursesWatch";
 import MyProducts from "./pages/MyProducts";
 import PostDetail from "./pages/PostDetail";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
 
 // ADMIN PAGES
 import AdminLogin from "./admin/pages/AdminLogin";
@@ -159,7 +161,8 @@ function App() {
             <Route path="/courses/watch/:id" element={<CoursesWatch />} />
             <Route path="/my-products" element={<MyProducts />} />
             <Route path="/post/:slug" element={<PostDetail />} />
-
+            <Route path="/register" element={<Register />} />
+            <Route path="/login" element={<Login />} />
             {/* admin */}
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route
