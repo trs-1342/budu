@@ -378,7 +378,7 @@ function CreateDrawer({
   const canSave =
     username.trim().length >= 3 &&
     email.includes("@") &&
-    password.trim().length >= 6;
+    password.trim().length >= 8;
 
   return (
     <div className="drawer-mask" onClick={onClose}>
@@ -419,7 +419,7 @@ function CreateDrawer({
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="en az 6 karakter"
+              placeholder="en az 8 karakter"
               autoComplete="new-password"
             />
           </div>
