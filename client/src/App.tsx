@@ -5,8 +5,6 @@ import Home from "./pages/Home";
 import Handbook from "./pages/Handbook";
 import NotFound from "./pages/NotFound";
 import MyProjects from "./pages/MyProjects";
-import Courses from "./pages/Courses";
-import CoursesWatch from "./pages/CoursesWatch";
 import MyProducts from "./pages/MyProducts";
 import PostDetail from "./pages/PostDetail";
 import Register from "./pages/Register";
@@ -41,8 +39,6 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/handbook" element={<Handbook />} />
             <Route path="/my-projects" element={<MyProjects />} />
-            <Route path="/courses" element={<Courses />} />
-            <Route path="/courses/watch/:id" element={<CoursesWatch />} />
             <Route path="/my-products" element={<MyProducts />} />
             <Route path="/post/:slug" element={<PostDetail />} />
             <Route path="/register" element={<Register />} />
