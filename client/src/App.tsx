@@ -7,6 +7,7 @@ import NotFound from "./pages/NotFound";
 import MyProjects from "./pages/MyProjects";
 import MyProducts from "./pages/MyProducts";
 import PostDetail from "./pages/PostDetail";
+import Courses from "./pages/Courses";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
 import Account from "./pages/Account";
@@ -41,6 +42,7 @@ function App() {
             <Route path="/my-projects" element={<MyProjects />} />
             <Route path="/my-products" element={<MyProducts />} />
             <Route path="/post/:slug" element={<PostDetail />} />
+            <Route path="/courses" element={<Courses />} />
             <Route path="/register" element={<Register />} />
             <Route path="/login" element={<Login />} />
             <Route path="/account" element={<Account />} />

@@ -139,6 +139,18 @@ function isEmail(x) {
   return EMAIL_RE.test(String(x || "").toLowerCase());
 }
 
+// ! DELETE
+
+function parseKey(emailOrUsername = "") {
+  const key = String(emailOrUsername || "")
+    .trim()
+    .toLowerCase();
+  if (EMAIL_RE.test(key)) return { col: "email", val: key };
+  if (USER_RE.test(key)) return { col: "username", val: key };
+  // e-posta değilse kullanıcı adı gibi davran
+  return { col: "username", val: key };
+}
+
 async function requireAuth(req, res, next) {
   try {
     const a = req.cookies?.access;
