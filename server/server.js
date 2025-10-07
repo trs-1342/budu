@@ -40,7 +40,6 @@ const pool = mysql.createPool({
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const USER_RE = /^[a-zA-Z0-9_.-]{3,64}$/;
 
-
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || "http://localhost:1001";
 const COURSES_ROOT = path.join(__dirname, "courses");
 const COURSES_VIDEO_DIR = path.join(COURSES_ROOT, "video");
@@ -105,6 +104,10 @@ app.use((req, res, next) => {
   if (req.method === "OPTIONS") return res.sendStatus(204);
   next();
 });
+
+function s(v) {
+  return typeof v === "string" ? v.trim() : "";
+}
 
 function cookieOpts(maxAgeMs) {
   const isProd = process.env.NODE_ENV === "production";
@@ -183,30 +186,35 @@ function assertId(req, res, next) {
   next();
 }
 
-function parseKey(emailOrUsername = "") {
-  const key = String(emailOrUsername || "")
-    .trim()
-    .toLowerCase();
-  if (EMAIL_RE.test(key)) return { col: "email", val: key };
-  if (USER_RE.test(key)) return { col: "username", val: key };
-  // e-posta değilse kullanıcı adı gibi davran
-  return { col: "username", val: key };
+function parseIdentifier(body) {
+  const raw =
+    s(body?.emailOrUsername) ||
+    s(body?.identifier) ||
+    s(body?.email) ||
+    s(body?.username);
+  if (!raw) return { kind: null, value: "" };
+  const kind = raw.includes("@") ? "email" : "username";
+  const value = kind === "email" ? raw.toLowerCase() : raw;
+  return { kind, value };
 }
 
+// --- CUSTOMER JWT sadece Authorization header'dan gelir ---
 function getCustomerToken(req) {
   const h = req.headers?.authorization || "";
   if (h.startsWith("Bearer ")) return h.slice(7).trim();
   return null;
 }
+
 function verifyCustomerToken(token) {
-  const payload = verifyAccess(token); // mevcut imzalayıcın
+  const payload = verifyAccess(token); // sende mevcut
   if (payload?.role && payload.role !== "customer") {
-    const err = new Error("ROLE_MISMATCH");
-    err.code = "ROLE_MISMATCH";
-    throw err;
+    const e = new Error("ROLE_MISMATCH");
+    e.code = "ROLE_MISMATCH";
+    throw e;
   }
   return payload;
 }
+
 function requireCustomer(req, res, next) {
   const t = getCustomerToken(req);
   if (!t) return res.status(401).json({ error: "Yetkisiz" });
@@ -219,6 +227,43 @@ function requireCustomer(req, res, next) {
       .json({ error: "Yetkisiz" });
   }
 }
+
+// function parseKey(emailOrUsername = "") {
+//   const key = String(emailOrUsername || "")
+//     .trim()
+//     .toLowerCase();
+//   if (EMAIL_RE.test(key)) return { col: "email", val: key };
+//   if (USER_RE.test(key)) return { col: "username", val: key };
+//   // e-posta değilse kullanıcı adı gibi davran
+//   return { col: "username", val: key };
+// }
+
+// function getCustomerToken(req) {
+//   const h = req.headers?.authorization || "";
+//   if (h.startsWith("Bearer ")) return h.slice(7).trim();
+//   return null;
+// }
+// function verifyCustomerToken(token) {
+//   const payload = verifyAccess(token); // mevcut imzalayıcın
+//   if (payload?.role && payload.role !== "customer") {
+//     const err = new Error("ROLE_MISMATCH");
+//     err.code = "ROLE_MISMATCH";
+//     throw err;
+//   }
+//   return payload;
+// }
+// function requireCustomer(req, res, next) {
+//   const t = getCustomerToken(req);
+//   if (!t) return res.status(401).json({ error: "Yetkisiz" });
+//   try {
+//     req.customer = verifyCustomerToken(t);
+//     next();
+//   } catch (e) {
+//     return res
+//       .status(e?.code === "ROLE_MISMATCH" ? 403 : 401)
+//       .json({ error: "Yetkisiz" });
+//   }
+// }
 
 function toMysqlDatetime(d) {
   const pad = (n) => String(n).padStart(2, "0");
@@ -515,19 +560,35 @@ app.post("/api/customers/login", async (req, res) => {
   }
 });
 
+// app.get("/api/customers/user-me", requireCustomer, async (req, res) => {
+//   try {
+//     const uid = req.customer.sub;
+//     const [rows] = await pool.execute(
+//       `SELECT id, username, email, fname, sname, country_dial AS countryDial, phone
+//          FROM customers WHERE id = ? LIMIT 1`,
+//       [uid]
+//     );
+//     if (!rows.length) return res.status(401).json({ error: "Yetkisiz" });
+//     return res.json(rows[0]); // wrapper yok
+//   } catch (err) {
+//     console.error("customers user-me error:", err);
+//     return res.status(500).json({ error: "Sunucu hatası" });
+//   }
+// });
+
 app.get("/api/customers/user-me", requireCustomer, async (req, res) => {
   try {
     const uid = req.customer.sub;
     const [rows] = await pool.execute(
-      `SELECT id, username, email, fname, sname, country_dial AS countryDial, phone
+      `SELECT id, username, email, fname, sname, phone, country_dial AS countryDial
          FROM customers WHERE id = ? LIMIT 1`,
       [uid]
     );
     if (!rows.length) return res.status(401).json({ error: "Yetkisiz" });
-    return res.json(rows[0]); // wrapper yok
-  } catch (err) {
-    console.error("customers user-me error:", err);
-    return res.status(500).json({ error: "Sunucu hatası" });
+    res.json(rows[0]);
+  } catch (e) {
+    console.error("user-me error:", e);
+    res.status(500).json({ error: "Sunucu hatası" });
   }
 });
 

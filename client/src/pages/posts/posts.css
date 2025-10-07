@@ -1,5 +1,5 @@
 .main-container {
-  margin: 0 15vw;
+  margin: 0 20vw;
   display: flex;
   gap: clamp(2rem, 4vw, 6rem);
   align-items: center;

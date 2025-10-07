@@ -136,24 +136,36 @@ export const UserApi = {
 };
 
 // --- Evrensel "kimim" (context için): önce admin, sonra user dene ---
+// export async function whoAmI(): Promise<Me | null> {
+//   const t = getToken();
+//   if (isJwtValid(t)) {
+//     // Geçerli JWT → kesin user akışı
+//     return await UserApi.me();
+//   }
+//   // JWT yok/geçersiz → admin çerezi olabilir
+//   const admin = await AdminApi.me();
+//   if (admin) return admin;
+
+//   // Nadir durum: JWT var ama decode edilemedi → son bir user denemesi
+//   if (t) {
+//     try {
+//       return await UserApi.me();
+//     } catch {
+//       /* ignore */
+//     }
+//   }
+//   return null;
+// }
+
 export async function whoAmI(): Promise<Me | null> {
   const t = getToken();
-  if (isJwtValid(t)) {
-    // Geçerli JWT → kesin user akışı
-    return await UserApi.me();
-  }
-  // JWT yok/geçersiz → admin çerezi olabilir
+  if (isJwtValid(t)) return await UserApi.me();
+
+  // token var ama geçersizse temizle
+  if (t) clearToken();
+
   const admin = await AdminApi.me();
   if (admin) return admin;
-
-  // Nadir durum: JWT var ama decode edilemedi → son bir user denemesi
-  if (t) {
-    try {
-      return await UserApi.me();
-    } catch {
-      /* ignore */
-    }
-  }
   return null;
 }
 
@@ -234,29 +246,48 @@ async function tryRefresh(): Promise<boolean> {
 }
 
 /** Genel fetch – 401’de bir kez refresh dener ve isteği yeniden yapar. */
+// export async function apiFetch(
+//   input: string,
+//   init: RequestInit & { retry?: boolean } = {}
+// ) {
+//   const url = input.startsWith("http") ? input : `${API_BASE}${input}`;
+//   const res = await fetch(url, {
+//     credentials: "include",
+//     ...init,
+//   });
+
+//   // 401 değilse veya zaten retry yapmışsak direkt dön
+//   if (res.status !== 401 || init.retry) return res;
+
+//   // 401 → refresh dene
+//   const ok = await tryRefresh();
+//   if (!ok) return res;
+
+//   // yenilendiyse isteği bir kez daha dene
+//   return fetch(url, {
+//     credentials: "include",
+//     ...init,
+//     retry: true,
+//   } as any);
+// }
+
 export async function apiFetch(
   input: string,
   init: RequestInit & { retry?: boolean } = {}
 ) {
   const url = input.startsWith("http") ? input : `${API_BASE}${input}`;
-  const res = await fetch(url, {
-    credentials: "include",
-    ...init,
-  });
+  const res = await fetch(url, { credentials: "include", ...init });
 
-  // 401 değilse veya zaten retry yapmışsak direkt dön
   if (res.status !== 401 || init.retry) return res;
 
-  // 401 → refresh dene
+  // CUSTOMER rotaları için refresh denemesi yapma
+  const isCustomerRoute = url.includes("/api/customers/");
+  if (isCustomerRoute) return res;
+
+  // Admin cookie akışı: refresh dene
   const ok = await tryRefresh();
   if (!ok) return res;
-
-  // yenilendiyse isteği bir kez daha dene
-  return fetch(url, {
-    credentials: "include",
-    ...init,
-    retry: true,
-  } as any);
+  return fetch(url, { credentials: "include", ...init, retry: true } as any);
 }
 
 /** Eski kodlar için: JSON gövde/başlık sarmalayıcı */

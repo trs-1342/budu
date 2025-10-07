@@ -300,3 +300,13 @@
 .marquee-track {
   animation-play-state: running;
 }
+/* problem */
+
+.main-container .btn {
+  border-radius: 9999px; /* önceki 8px/10px'i ezer */
+}
+@media (max-width: 480px) {
+  .main-container .btn {
+    border-radius: 9999px;
+  }
+}

@@ -32,7 +32,7 @@
   gap: 0.75rem;
 }
 
-.subscribe-form input{
+.subscribe-form input {
   font-size: 1rem;
   font-family: "Fira Code", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
@@ -207,4 +207,73 @@
   .socials {
     grid-template-columns: 1fr;
   }
+}
+
+/* problem */
+
+/* --- Footer actions: full pill --- */
+.footer-section .subscribe-btn,
+.footer-section .cta-action {
+  border-radius: 9999px; /* 10px yerine */
+}
+
+/* Sosyal öğeyi komple tıklanabilir yap */
+.social-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  position: relative;
+  padding: 0.25rem 0;
+  color: inherit;
+  text-decoration: none; /* tüm satır link */
+  cursor: pointer;
+}
+
+.social-item .left {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+/* Önceden sadece .label underline idi; satır hover'ında animasyon verelim */
+.social-item .label {
+  text-decoration: none;
+}
+.social-item .underline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.15);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.2s ease;
+}
+.social-item:hover .underline,
+.social-item:focus-visible .underline {
+  transform: scaleX(1);
+}
+
+.social-item .arrow {
+  opacity: 0.9;
+}
+
+/* Klavye erişilebilirliği */
+.social-item:focus-visible {
+  outline: 2px solid #0f0f10;
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* RTL sayfalarda yön/simge düzeni */
+html[dir="rtl"] .social-item {
+  flex-direction: row-reverse;
+}
+html[dir="rtl"] .social-item .left {
+  flex-direction: row-reverse;
+}
+html[dir="rtl"] .social-item .underline {
+  transform-origin: right;
 }

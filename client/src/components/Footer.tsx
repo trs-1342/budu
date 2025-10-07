@@ -96,7 +96,7 @@ export default function Footer() {
       </div>
 
       {/* Socials */}
-      <nav
+      {/* <nav
         className="socials"
         aria-label="Sosyal bağlantılar"
         data-reveal-group
@@ -174,6 +174,85 @@ export default function Footer() {
           </span>
           <div className="underline" />
         </div>
+      </nav> */}
+
+      <nav
+        className="socials"
+        aria-label="Sosyal bağlantılar"
+        data-reveal-group
+        style={{ "--reveal-stagger": "80ms" } as React.CSSProperties}
+      >
+        <a
+          className="social-item reveal reveal--center"
+          href="https://instagram.com/jolanar444"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <span className="left">
+            <span className="icon" aria-hidden style={{ fontSize: 32 }}>
+              <FaInstagram />
+            </span>
+            <span className="label">Instagram</span>
+          </span>
+          <span className="arrow" aria-hidden>
+            →
+          </span>
+          <span className="underline" aria-hidden />
+        </a>
+
+        <a
+          className="social-item reveal reveal--center"
+          href="https://linkedin.com/in/bushra-dukhan-671869107/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <span className="left">
+            <span className="icon" aria-hidden style={{ fontSize: 32 }}>
+              <FaLinkedin />
+            </span>
+            <span className="label">LinkedIn</span>
+          </span>
+          <span className="arrow" aria-hidden>
+            →
+          </span>
+          <span className="underline" aria-hidden />
+        </a>
+
+        <a
+          className="social-item reveal reveal--center"
+          href="https://wa.me/905374943971"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <span className="left">
+            <span className="icon" aria-hidden style={{ fontSize: 32 }}>
+              <FaWhatsapp />
+            </span>
+            <span className="label">WhatsApp</span>
+          </span>
+          <span className="arrow" aria-hidden>
+            →
+          </span>
+          <span className="underline" aria-hidden />
+        </a>
+
+        <a
+          className="social-item reveal reveal--center"
+          href="mailto:jolanar444@gmail.com"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <span className="left">
+            <span className="icon" aria-hidden style={{ fontSize: 32 }}>
+              <MdEmail />
+            </span>
+            <span className="label">jolanar444@gmail.com</span>
+          </span>
+          <span className="arrow" aria-hidden>
+            →
+          </span>
+          <span className="underline" aria-hidden />
+        </a>
       </nav>
 
       {/* <div className="cta-box reveal reveal--up"> */}
@@ -184,13 +263,3 @@ export default function Footer() {
     </footer>
   );
 }
-
-// export default function Footer() {
-//   return (
-//     <footer className="site-footer">
-//       <div className="container">
-//         <small>© {new Date().getFullYear()} BUDU</small>
-//       </div>
-//     </footer>
-//   );
-// }
