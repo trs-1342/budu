@@ -1,0 +1,73 @@
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap");
+
+.admin-scope .md-wrap {
+  display: grid;
+  gap: 12px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 13px;
+}
+.admin-scope .md-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.admin-scope .md-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.admin-scope .btn {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #000;
+  color: #fff;
+  cursor: pointer;
+  font-size: 12px;
+}
+.admin-scope .btn:hover {
+  background: #0b0b0b;
+}
+.admin-scope .btn.danger {
+  border-color: #3a1a1a;
+}
+
+.admin-scope .md-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  display: grid;
+  gap: 8px;
+}
+.admin-scope .md-meta {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.admin-scope .md-from {
+  font-weight: 600;
+}
+.admin-scope .md-time {
+  color: var(--muted);
+  font-size: 12px;
+}
+.admin-scope .badge {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 3px 8px;
+  font-size: 11px;
+  background: #000;
+  color: #fff;
+}
+.admin-scope .md-subject {
+  margin: 0;
+  font-weight: 600;
+}
+.admin-scope .md-body {
+  margin: 0;
+  white-space: pre-wrap;
+  color: #fff;
+}

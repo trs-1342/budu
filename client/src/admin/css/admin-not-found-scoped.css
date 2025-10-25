@@ -1,0 +1,15 @@
+/* Sadece AdminNotFound bileşeninin arka planını tam siyah yapar */
+.admin-not-found-bg {
+  font-family: Verdana, Geneva, Tahoma, sans-serif;
+  background: #000 !important;
+  width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
+  min-width: 100vw;
+  margin: 0;
+  padding: 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: -1;
+}

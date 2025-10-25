@@ -1,0 +1,190 @@
+/* Kurs Yönetimi (Admin) – sadece bu sayfa */
+/* @import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap"); */
+
+.admin-scope.courses-wrap {
+  --bg: #000; /* arka plan */
+  --line: #232323; /* çizgiler */
+  --card: #0b0b0b; /* kart zeminleri */
+  --muted: #b5b5b5; /* soluk metin */
+  color: #fff;
+}
+
+/* Sayfa iskeleti */
+.admin-scope .courses-wrap {
+  display: grid;
+  gap: 12px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 13px;
+}
+
+/* ÜST FORM KARTINI ŞEFFAFLA: beyaz zemin yok */
+.courses-wrap .ad-card.is-form {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+/* Başlık şeridi yok, sadece beyaz metin */
+.courses-wrap .ad-card-title {
+  background: transparent !important;
+  border: 0 !important;
+  padding: 0 0 10px !important;
+  color: #fff;
+}
+
+/* Form bloğu koyu kutu içinde (beyaz yok) */
+.courses-wrap .panel-form {
+  background: #0b0b0b;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  padding: 14px;
+}
+.courses-wrap .form-grid {
+  display: grid;
+  gap: 12px;
+}
+@media (min-width: 860px) {
+  .courses-wrap .form-grid {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+  .courses-wrap .form-grid > *:nth-child(3) {
+    grid-column: 1 / -1;
+  }
+}
+
+.courses-wrap .label {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0 0 6px;
+  letter-spacing: 0.2px;
+}
+
+/* Input / Textarea – zemin siyah, yazı beyaz */
+.courses-wrap .input,
+.courses-wrap textarea.input,
+.courses-wrap select.input {
+  width: 100%;
+  background: #000;
+  color: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  outline: none;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+.courses-wrap .input:focus,
+.courses-wrap textarea.input:focus,
+.courses-wrap select.input:focus {
+  border-color: #fff;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.05);
+}
+
+/* File input */
+.courses-wrap .input[type="file"] {
+  padding: 8px 10px;
+  cursor: pointer;
+}
+.courses-wrap .input[type="file"]::file-selector-button,
+.courses-wrap .input[type="file"]::-webkit-file-upload-button {
+  border: 0;
+  padding: 8px 12px;
+  margin-right: 10px;
+  border-radius: 9px;
+  background: #111;
+  color: #fff;
+  font-weight: 600;
+}
+
+/* Aksiyon satırı */
+.courses-wrap .row-end {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Butonlar – koyu */
+.courses-wrap .btn {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #000;
+  color: #fff;
+  cursor: pointer;
+  font-size: 12px;
+}
+.courses-wrap .btn:hover {
+  background: #0d0d0d;
+}
+.courses-wrap .btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.courses-wrap .btn.primary {
+  background: #121212;
+}
+.courses-wrap .btn.danger {
+  border-color: #3a1a1a;
+  background: #1a0f10;
+}
+
+/* Uyarılar */
+.courses-wrap .alert {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #101010;
+}
+.courses-wrap .alert.error {
+  color: #f1b3b3;
+  border-color: #5c1f1f;
+  background: #1a0f0f;
+}
+.courses-wrap .alert.warn {
+  color: #ffdca3;
+  border-color: #5f4a1a;
+  background: #1a160d;
+}
+
+/* Liste kartı da koyu */
+.courses-wrap > .ad-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+.courses-wrap .table {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr;
+  margin-top: 12px;
+}
+.courses-wrap article.ad-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+.courses-wrap article.ad-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--line);
+}
+.courses-wrap article.ad-card header .ad-muted {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Video önizleme */
+.courses-wrap video {
+  width: 100%;
+  max-height: 380px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #000;
+}

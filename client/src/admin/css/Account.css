@@ -1,0 +1,33 @@
+.acc-wrap {
+  display: grid;
+  gap: 12px;
+}
+.acc-title {
+  margin: 0 0 4px;
+}
+.acc-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
+  display: grid;
+  gap: 8px;
+}
+.acc-row {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 12px;
+  align-items: center;
+}
+.acc-key {
+  color: var(--muted);
+}
+.acc-val {
+  color: #fff;
+  word-break: break-word;
+}
+@media (max-width: 600px) {
+  .acc-row {
+    grid-template-columns: 1fr;
+  }
+}

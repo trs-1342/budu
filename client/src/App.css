@@ -1,0 +1,372 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* reset + utilities */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+img,
+video {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+.container {
+  width: var(--container);
+  margin: 0 auto;
+}
+.round-xl {
+  border-radius: var(--radius-xl);
+}
+.shadow-soft {
+  box-shadow: var(--shadow-soft);
+}
+
+/* fluid headings */
+h1 {
+  font-size: var(--fs-h1);
+  line-height: 1.1;
+}
+h2 {
+  font-size: var(--fs-h2);
+  line-height: 1.15;
+}
+body {
+  font-size: var(--fs-body);
+}
+
+/* grids shortcut */
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: clamp(1rem, 2.5vw, 2rem);
+}
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(1rem, 2.5vw, 2rem);
+}
+
+/* touch & motion */
+@media (hover: hover) {
+  .btn:hover {
+    transform: translateY(-1px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* breakpoints */
+@media (max-width: 1280px) {
+  .container {
+    width: min(1100px, 94vw);
+  }
+}
+@media (max-width: 1024px) {
+  .grid-2,
+  .grid-3 {
+    grid-template-columns: 1fr;
+  }
+  .section {
+    margin: 3rem 6vw;
+  }
+}
+@media (max-width: 768px) {
+  .stack-sm {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .card-media {
+    height: 48vw;
+  } /* görsel yüksekliği fluid */
+}
+@media (max-width: 480px) {
+  .section {
+    margin: 2.2rem 4vw;
+  }
+  .btn {
+    padding: 0.85rem 1rem;
+    border-radius: 10px;
+  }
+  .title-lg {
+    letter-spacing: 0.1px;
+  }
+}
+
+/* ! ANIMATIONS */
+
+/* === Reveal on Scroll – Global === */
+:root {
+  --easing: cubic-bezier(0.22, 1, 0.36, 1);
+  --reveal-distance: 36px;
+  --reveal-duration: 0.8s;
+}
+.reveal,
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(var(--reveal-distance));
+  transition: opacity var(--reveal-duration) var(--easing),
+    transform var(--reveal-duration) var(--easing);
+  will-change: opacity, transform;
+}
+.is-visible {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+.reveal--right,
+[data-reveal="right"] {
+  transform: translateX(var(--reveal-distance));
+}
+.reveal--left,
+[data-reveal="left"] {
+  transform: translateX(calc(var(--reveal-distance) * -1));
+}
+.reveal--up,
+[data-reveal="up"] {
+  transform: translateY(calc(var(--reveal-distance) * -1));
+}
+.reveal--down,
+[data-reveal="down"] {
+  transform: translateY(var(--reveal-distance));
+}
+.reveal--fade,
+[data-reveal="fade"] {
+  transform: none;
+}
+
+/* ! Stagger (peş peşe) ESKI KOD */
+/* [data-reveal-group] > * {
+  transition-delay: calc(var(--reveal-stagger, 60ms) * var(--i, 0));
+}
+[data-reveal-group] > *.is-visible {
+  transition-delay: calc(var(--reveal-stagger, 60ms) * var(--i, 0));
+} */
+
+/* * yeni kod */
+[data-reveal-group] > .reveal {
+  transition-delay: calc(var(--reveal-stagger, 60ms) * var(--i, 0));
+}
+[data-reveal-group] > .reveal.is-visible {
+  transition-delay: 0ms !important;
+}
+
+/* Hareket tercihleri */
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  [data-reveal],
+  .is-visible {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
+/* === Handbook micro-animations === */
+.section-title {
+  position: relative;
+  display: inline-block;
+}
+/* RTL başlık için sağdan sola büyüyen alt çizgi */
+.section-title::after {
+  content: "";
+  position: absolute;
+  bottom: -8px;
+  right: 0;
+  width: 0;
+  height: 2px;
+  background: currentColor;
+  transition: width 0.6s var(--easing);
+}
+.section-title.is-visible::after {
+  width: 100%;
+}
+
+/* Üst rozet shimmer */
+.hb-badge {
+  position: relative;
+  overflow: hidden;
+}
+.hb-badge::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    120deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.6) 25%,
+    transparent 50%
+  );
+  transform: translateX(-120%);
+}
+.hb-badge:hover::after {
+  animation: hb-shine 850ms var(--easing) forwards;
+}
+@keyframes hb-shine {
+  to {
+    transform: translateX(120%);
+  }
+}
+
+/* ! Adım kartları hover mikro etkileşim Eski kod */
+/* .hb-step-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 8px 12px;
+  transition: transform 0.35s var(--easing), box-shadow 0.35s var(--easing);
+}
+.hb-step-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
+} */
+
+/* * yeni kod */
+/* hover’da ani tepki */
+/* .hb-step-card:hover,
+.hb-step-card:focus-visible {
+  transition: none !important;
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
+} */
+
+/* !!! */
+
+/* Kart hover */
+.cv-image,
+.social-item:hover,
+.product-card:hover,
+.courses-card:hover,
+.servisec-card:hover,
+.project-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.213);
+  transition: transform 0.35s var(--easing), box-shadow 0.35s var(--easing);
+}
+
+/* Bölüm başlıklarına underline-grow (başlığı da reveal yapınca çizgi de dolar) */
+.section-title {
+  position: relative;
+  display: inline-block;
+}
+.section-title::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -6px;
+  height: 2px;
+  width: 0;
+  background: currentColor;
+  transition: width 0.5s var(--easing);
+}
+.section-title.is-visible::after {
+  width: 100%;
+}
+
+/* === Handbook micro-animations === */
+.section-title {
+  position: relative;
+  display: inline-block;
+}
+/* RTL başlık için sağdan sola büyüyen alt çizgi */
+.section-title::after {
+  content: "";
+  position: absolute;
+  bottom: -8px;
+  right: 0;
+  width: 0;
+  height: 2px;
+  background: currentColor;
+  transition: width 0.6s var(--easing);
+}
+.section-title.is-visible::after {
+  width: 100%;
+}
+
+/* Üst rozet shimmer */
+.hb-badge {
+  position: relative;
+  overflow: hidden;
+}
+.hb-badge::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    120deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.6) 25%,
+    transparent 50%
+  );
+  transform: translateX(-120%);
+}
+.hb-badge:hover::after {
+  animation: hb-shine 850ms var(--easing) forwards;
+}
+@keyframes hb-shine {
+  to {
+    transform: translateX(120%);
+  }
+}
+
+/* Adım kartları hover mikro etkileşim */
+.hb-step-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 8px 12px;
+  transition: transform 0.35s var(--easing), box-shadow 0.35s var(--easing);
+}
+.hb-step-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
+}
+
+/* ? */
+/* === Mobile: tüm reveal'ları kapat (<=900px) === */
+@media (max-width: 900px) {
+  .reveal,
+  [data-reveal],
+  .is-visible {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+    /* box-shadow: none; */
+  }
+  /* .social-item:hover {
+    transform: none !important;
+    box-shadow: none !important;
+    transition: none !important;
+    pointer-events: none;
+    cursor: default;
+  } */
+  /* Stagger'ı da kapat */
+  [data-reveal-group] > .reveal {
+    transition-delay: 0ms !important;
+  }
+}
+
+/* === Tablet: senkronize et (901–1200px) === */
+@media (min-width: 901px) and (max-width: 1200px) {
+  :root {
+    --reveal-distance: 16px; /* daha küçük hareket */
+    --reveal-duration: 0.45s; /* daha kısa süre */
+  }
+  /* Stagger gecikmesini kaldır: aynı anda girsinler */
+  [data-reveal-group] > .reveal {
+    transition-delay: 0ms !important;
+  }
+}

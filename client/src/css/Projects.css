@@ -1,0 +1,139 @@
+/* Genel bölüm */
+.projects-section {
+  margin: 4rem 15vw 6rem;
+  direction: ltr; /* Bu bölüm TR, sitenin geri kalanı RTL ise sorun yaşamazsın */
+  font-family: "MassiraPen", ui-sans-serif, system-ui;
+}
+
+/* Üst şerit (sol üst buton) */
+.projects-topbar {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 1rem;
+}
+
+.projects-all-btn {
+  background: #111;
+  color: #fff;
+  text-decoration: none;
+  font-size: 16px;
+  padding: 0.7rem 1rem;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: transform 0.15s ease, background 0.2s ease;
+  will-change: transform;
+}
+.projects-all-btn:hover {
+  background: #222;
+  transform: translateY(-1px);
+}
+.projects-all-btn:active {
+  transform: translateY(0);
+}
+
+/* Başlık alanı */
+.projects-header {
+  text-align: center;
+  margin: 0 0 2.5rem;
+}
+
+.projects-title {
+  margin: 0 0 0.6rem;
+  font-size: clamp(28px, 4vw, 56px);
+  line-height: 1.1;
+  color: #111;
+}
+
+.projects-subtitle {
+  margin: 0;
+  font-size: clamp(14px, 1.8vw, 18px);
+  color: #5b5b5b;
+}
+
+/* Grid */
+.projects-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: clamp(1.2rem, 2.5vw, 2rem);
+}
+
+/* Kart */
+.project-card {
+  background: #f6f6f6;
+  border-radius: 22px;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.project-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.09);
+}
+
+/* Görsel */
+.project-media img {
+  width: 100%;
+  height: clamp(220px, 30vw, 340px);
+  object-fit: cover;
+  display: block;
+}
+
+/* İçerik */
+.project-content {
+  padding: clamp(1rem, 2.2vw, 1.5rem);
+}
+
+.project-name {
+  margin: 0 0 0.6rem;
+  font-size: clamp(20px, 2.6vw, 30px);
+  color: #111;
+}
+
+.project-desc {
+  margin: 0 0 1.1rem;
+  color: #555;
+  font-size: clamp(14px, 1.8vw, 17px);
+  line-height: 1.6;
+}
+
+/* Alt aksiyon */
+.project-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.project-link {
+  --link-color: #111;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--link-color);
+  text-decoration: none;
+  font-weight: 600;
+  padding: 0.4rem 0.6rem;
+  border-radius: 10px;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.project-link:hover {
+  background: #eaeaea;
+  transform: translateX(2px);
+}
+.project-link-arrow {
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .projects-grid {
+    grid-template-columns: 1fr;
+  }
+  .projects-section {
+    margin: 3rem 8vw 5rem;
+  }
+}

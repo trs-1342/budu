@@ -1,0 +1,109 @@
+/* Header.css */
+.App-header {
+  margin: 0 15vw 0;
+}
+
+.App-header nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* sol-buton | menü | logo */
+  gap: 2rem;
+}
+
+nav ul {
+  list-style: none;
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  padding: 0;
+  font-size: 25px;
+  flex: 1; /* ortalamayı kolaylaştırır */
+}
+
+/* Sol taraftaki buton */
+#span-project-button {
+  justify-self: start; /* grid hücresinde sola yasla */
+}
+
+#project-button {
+  background: #000;
+  color: #fff;
+  padding: 1rem 1.2rem;
+  border: 0;
+  border-radius: 10px;
+  font-size: 18px;
+  font-family: "MassiraPen";
+  cursor: pointer;
+  transition: background 0.25s;
+}
+#project-button:hover {
+  background: #222;
+}
+
+/* Ortadaki menü */
+/* nav ul {
+  list-style: none;
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+  padding: 0;
+  font-size: 25px;
+} */
+
+nav ul li a {
+  text-decoration: none;
+  color: #111;
+  transition: color 0.2s;
+}
+
+nav ul li a:hover {
+  color: #555;
+}
+
+#budu-logo {
+  width: 200px;
+  height: auto;
+  object-fit: contain;
+}
+/* @media (max-width: 600px) {
+  nav ul {
+    gap: 1rem;
+  }
+  #project-button {
+    padding: 0.45rem 1rem;
+  }
+} */
+
+@media (max-width: 700px) {
+  .App-header {
+    margin: 0 8vw;
+  }
+
+  .App-header nav {
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  /* logo ufalsın */
+  #budu-logo {
+    width: 140px;
+    order: 1;
+  }
+
+  /* menü tam ortada, tek satır/iki satır olabilir */
+  nav ul {
+    order: 2;
+    width: 100%;
+    justify-content: center;
+    gap: 1.2rem;
+    font-size: 20px;
+  }
+
+  /* “projeyi başlat” butonunu en alta ortaya al */
+  #span-project-button {
+    display: none;
+  }
+  #project-button {
+    display: none;
+  }
+}
