@@ -9,45 +9,6 @@ type LoginBody = {
   remember?: boolean;
 };
 
-// async function loginRequest(body: LoginBody) {
-//   const anyApi: any = Api as any;
-
-//   // 1) Varsa AuthApi.login kullan
-//   if (anyApi.AuthApi?.login) {
-//     return anyApi.AuthApi.login(body);
-//   }
-
-//   // 2) Varsa api(path, init) kullan
-//   if (typeof anyApi.api === "function") {
-//     return anyApi.api("/api/auth/user-login", {
-//       method: "POST",
-//       headers: { "Content-Type": "application/json" },
-//       credentials: "include",
-//       body: JSON.stringify(body),
-//     });
-//   }
-
-//   // 3) Fallback fetch
-//   const res = await fetch("/api/auth/user-login", {
-//     method: "POST",
-//     headers: { "Content-Type": "application/json" },
-//     credentials: "include",
-//     body: JSON.stringify(body),
-//   });
-//   if (!res.ok) {
-//     let j: any = {};
-//     try {
-//       j = await res.json();
-//     } catch {}
-//     throw new Error(j?.error || res.statusText);
-//   }
-//   try {
-//     return await res.json();
-//   } catch {
-//     return {};
-//   }
-// }
-
 async function loginRequest(body: LoginBody) {
   const anyApi: any = Api as any;
 

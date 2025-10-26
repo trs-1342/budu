@@ -25,7 +25,6 @@ export default function AccountSettings() {
   const [curPass, setCurPass] = useState("");
   const [newPass, setNewPass] = useState("");
   const [newPass2, setNewPass2] = useState("");
-  // üstte importlardan sonra ekle (zaten useState var):
   const [showCur, setShowCur] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showNew2, setShowNew2] = useState(false);
