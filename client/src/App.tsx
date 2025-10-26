@@ -60,7 +60,6 @@ function App() {
             <Route path="/courses" element={<Courses />} />
             <Route path="/courses/watch/:id" element={<CoursesWatch />} />
             <Route path="/my-products" element={<MyProducts />} />
-            {/* <Route path="/auth" element={<Auth />} /> */}
             <Route path="/register" element={<Register />}/>
             <Route path="/login" element={<Login />}/>
             <Route path="/account" element={<AccountSettings />} />

@@ -54,7 +54,7 @@ export default function CoursesWatch() {
         const abs = url.startsWith("http") ? url : `${API_BASE}${url}`;
         if (live) setPlayUrl(abs);
       } catch {
-        nav("/auth");
+        nav("/login");
       }
     })();
     return () => {

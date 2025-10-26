@@ -45,7 +45,7 @@ export default function AccountSettings() {
 
   useEffect(() => {
     if (!getToken()) {
-      nav("/auth", { replace: true });
+      nav("/login", { replace: true });
       return;
     }
     (async () => {
@@ -55,6 +55,12 @@ export default function AccountSettings() {
         setPhone(data.phone || "");
         setNotify(!!data.membershipNotify);
       } catch (e: any) {
+        // 401/403 → oturumsuz; diğer hatalarda uyarı göster
+        const msg = e?.message?.toLowerCase?.() || "";
+        if (msg.includes("unauthorized") || msg.includes("401") || msg.includes("forbidden") || msg.includes("403")) {
+          nav("/login", { replace: true });
+          return;
+        }
         console.error(e);
         alert("Hesap bilgileri alınamadı.");
       } finally {
@@ -135,6 +141,16 @@ export default function AccountSettings() {
       <div className="account-layout reveal reveal--up">
         {/* SOL MENÜ */}
         <aside className="side">
+          <button
+            className="side-item"
+            onClick={() => {
+              // nav kullanmak yerine:
+              // tam sayfa yenilemesi ile ana sayfaya yönlendir
+              window.location.replace("/");
+            }}
+          >
+            Ana Sayfa
+          </button>
           <button
             className={`side-item ${tab === "account" ? "active" : ""}`}
             onClick={() => setTab("account")}

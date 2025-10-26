@@ -2,6 +2,8 @@
   min-height: 100vh;
   background: #f8fafc;
   padding: 28px;
+
+  font-family: "Fira Code" ,'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
 }
 .account-layout {
   max-width: 1120px;

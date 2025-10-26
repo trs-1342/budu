@@ -1,4 +1,3 @@
-require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
@@ -9,9 +8,18 @@ const jwt = require("jsonwebtoken");
 const ms = require("ms");
 const fs = require("fs");
 const path = require("path");
+require("dotenv").config({ path: path.resolve(process.cwd(), ".env.local") });
 const multer = require("multer");
 const { customAlphabet } = require("nanoid");
 const mime = require("mime-types");
+
+const REQ = ["DB_HOST", "DB_PORT", "DB_USER", "DB_PASS", "DB_NAME"];
+for (const k of REQ) {
+  if (!process.env[k] || String(process.env[k]).trim() === "") {
+    throw new Error(`Missing required env: ${k}`);
+  }
+}
+
 
 const {
   PORT = 1002,
@@ -32,7 +40,7 @@ const pool = mysql.createPool({
   host: DB_HOST,
   port: Number(DB_PORT || 3306),
   user: DB_USER,
-  password: DB_PASS || console.warn("DB_PASS is empty"),
+  password: DB_PASS,
   database: DB_NAME,
   connectionLimit: 10,
   charset: "utf8mb4_unicode_ci",
@@ -1183,7 +1191,7 @@ app.post(
     const detail = String(req.body?.detail || "").trim() || null;
 
     if (!title) {
-      if (req.file) fs.unlink(req.file.path, () => {});
+      if (req.file) fs.unlink(req.file.path, () => { });
       return res.status(400).json({ error: "Başlık zorunlu" });
     }
     if (!req.file)
@@ -1213,7 +1221,7 @@ app.post(
       );
       return res.status(201).json({ item: rows[0] });
     } catch (e) {
-      fs.unlink(req.file.path, () => {});
+      fs.unlink(req.file.path, () => { });
       throw e;
     }
   })
@@ -1244,19 +1252,19 @@ app.delete(
 
       if (item?.video_url && item.video_url.startsWith("/courses/")) {
         const abs = safeJoin(COURSES_ROOT, item.video_url);
-        fs.unlink(abs, () => {});
+        fs.unlink(abs, () => { });
       }
 
       return res.json({ ok: true });
     } catch (e) {
       try {
         await conn.rollback();
-      } catch {}
+      } catch { }
       throw e;
     } finally {
       try {
         conn.release();
-      } catch {}
+      } catch { }
     }
   })
 );

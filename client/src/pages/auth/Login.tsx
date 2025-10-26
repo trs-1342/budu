@@ -78,7 +78,7 @@ async function loginRequest(body: LoginBody) {
     let j: any = {};
     try {
       j = await res.json();
-    } catch {}
+    } catch { }
     throw new Error(j?.error || res.statusText);
   }
   try {
@@ -109,11 +109,17 @@ export default function Login() {
 
     try {
       setLoading(true);
-      await loginRequest({
+      const resp: any = await loginRequest({
         emailOrUsername: login.trim(),
         password,
         remember,
       });
+      // localStorage.setItem("remember_me", remember ? "1" : "0");
+      // token varsa kaydet
+      const token = resp?.token || resp?.access || resp?.accessToken;
+      if (token) {
+        localStorage.setItem("token", token);
+      }
       localStorage.setItem("remember_me", remember ? "1" : "0");
       nav("/account", { replace: true }); // istersen "/" yap
     } catch (e: any) {
