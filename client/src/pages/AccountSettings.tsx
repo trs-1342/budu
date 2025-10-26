@@ -144,8 +144,6 @@ export default function AccountSettings() {
           <button
             className="side-item"
             onClick={() => {
-              // nav kullanmak yerine:
-              // tam sayfa yenilemesi ile ana sayfaya yönlendir
               window.location.replace("/");
             }}
           >
