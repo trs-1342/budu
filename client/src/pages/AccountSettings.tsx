@@ -33,16 +33,6 @@ export default function AccountSettings() {
   // membership notify
   const [notify, setNotify] = useState(false);
 
-  //   const [showWelcome, setShowWelcome] = useState(false);
-
-  //   useEffect(() => {
-  //     if (localStorage.getItem("justLoggedIn") === "1") {
-  //       localStorage.removeItem("justLoggedIn");
-  //       setShowWelcome(true);
-  //       setTimeout(() => setShowWelcome(false), 4000); // 4 sn'de fade-out
-  //     }
-  //   }, []);
-
   useEffect(() => {
     if (!getToken()) {
       nav("/login", { replace: true });
