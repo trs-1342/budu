@@ -247,17 +247,6 @@ const ALLOWED_VIDEO = new Map([
 
 const MAX_VIDEO_MB = Number(process.env.MAX_VIDEO_MB || 1024); // 1 GB varsayılan
 
-// === multer storage ===
-// const storageForVid = multer.diskStorage({
-//   destination: (req, file, cb) => cb(null, COURSES_VIDEO_DIR),
-//   filename: (req, file, cb) => {
-//     const ext = (path.extname(file.originalname) || "").toLowerCase();
-//     const titleSlug = slugify(req.body?.title || file.originalname);
-//     const rand = crypto.randomBytes(5).toString("hex");
-//     cb(null, `${Date.now()}_${titleSlug}_${rand}${ext}`);
-//   },
-// });
-
 const storageForVid = multer.diskStorage({
   destination: (req, file, cb) => cb(null, COURSES_VIDEO_DIR),
   filename: (req, file, cb) => {
@@ -281,14 +270,6 @@ const uploadForVid = multer({
 // küçük async wrapper
 const wrap = (fn) => (req, res, next) =>
   Promise.resolve(fn(req, res, next)).catch(next);
-
-// opsiyonel: sadece admin izni
-// function ensureAdmin(req, res, next) {
-//   // requireAuth sonrası req.user varsa
-//   if (req.user && (req.user.role === "admin" || req.user.role === "editor"))
-//     return next();
-//   return res.status(403).json({ error: "Forbidden" });
-// }
 
 // --- Admin helper'ları ---
 function isTruthy(v) {
@@ -1417,19 +1398,6 @@ app.use((req, _res, next) => {
     })
     .catch(() => next()); // sessiz geç: admin kontrolü zaten env ile de çalışır
 });
-
-// app.get("/api/admin/_debug/whoami", (req, res) => {
-//   res.json({
-//     hasUser: !!(req.user && req.user.id),
-//     user: req.user || null,
-//     hasSession: !!req.session,
-//     session: {
-//       admin: req.session?.admin ?? null,
-//       adminUser: !!req.session?.adminUser,
-//       userId: req.session?.userId ?? null,
-//     },
-//   });
-// });
 
 app.get("/api/admin/_debug/whoami", (req, res) => {
   res.json({
