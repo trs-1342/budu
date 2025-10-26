@@ -63,31 +63,6 @@ export async function api<T = any>(
 
 export type ApiError = { error?: string };
 
-// export async function api<T = any>(
-//   path: string,
-//   init: RequestInit = {}
-// ): Promise<T> {
-//   const res = await fetch(path, {
-//     credentials: "include", // çerezleri gönder
-//     headers: {
-//       "Content-Type": "application/json",
-//       ...(init.headers || {}),
-//     },
-//     ...init,
-//   });
-
-//   // JSON olmayan yanıtlar için de deneyelim
-//   const tryJson = async () => {
-//     try { return await res.json(); } catch { return {}; }
-//   };
-
-//   if (!res.ok) {
-//     const j = (await tryJson()) as ApiError;
-//     throw new Error(j?.error || res.statusText);
-//   }
-//   return (await tryJson()) as T;
-// }
-
 // Kısa yol helpers
 export const AuthApi = {
   register(body: { email: string; username: string; password: string }) {
