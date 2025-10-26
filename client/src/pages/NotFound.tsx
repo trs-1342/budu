@@ -19,17 +19,3 @@ const NotFound: React.FC = () => (
 );
 
 export default NotFound;
-
-// import { Link } from "react-router-dom";
-
-// export default function NotFound() {
-//   return (
-//     <section className="container reveal" data-reveal>
-//       <h1>Sayfa bulunamadı</h1>
-//       <p>Aradığın sayfa taşınmış veya hiç olmamış olabilir.</p>
-//       <Link to="/" className="btn">
-//         Ana sayfa
-//       </Link>
-//     </section>
-//   );
-// }
