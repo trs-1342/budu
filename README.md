@@ -1,5 +1,8 @@
 # Budu Web Site
 
+> **Uyarı:**
+> Projenin [Commit](https://github.com/trs-1342/budu/commits/) geçmişini kaybettim. 
+
 Bu proje annemin isteği üzerine geliştirilmiş olup, kişisel CV / portfolyo amacı taşımaktadır.  
 Hem kullanıcı arayüzü hem de sunucu tarafı ayrı ayrı kodlanmış, modern bir yapıya sahiptir.
 
