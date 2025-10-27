@@ -144,12 +144,12 @@ export default function AccountSettings() {
           >
             Hesap
           </button>
-          <button
+          {/* <button
             className={`side-item ${tab === "settings" ? "active" : ""}`}
             onClick={() => setTab("settings")}
           >
             Ayarlar
-          </button>
+          </button> */}
         </aside>
 
         {/* İÇERİK */}
@@ -159,6 +159,10 @@ export default function AccountSettings() {
               {/* ÖZET */}
               <div className="panel panel-form">
                 <h3>Hesap Özeti</h3>
+                <p>
+                  Sadece Telefon numaranızı düzenleyebilirsiniz.
+                </p>
+                <br />
                 <div className="grid">
                   <div>
                     <label>E-posta</label>

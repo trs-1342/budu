@@ -7,6 +7,8 @@ import { api } from "../lib/api";
 import VideoPlayer from "../components/VideoPlayer";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:1002";
+const toAbs = (u: string) => (u?.startsWith("http") ? u : `${API_BASE}${u}`);
+const isHls = (u: string) => /\.m3u8($|\?)/i.test(u);
 
 type Course = {
   id: number;
@@ -46,21 +48,19 @@ export default function CoursesWatch() {
   useEffect(() => {
     let live = true;
     (async () => {
-      try {
-        const p = await api<{ playback: string }>(`/api/courses/${id}/play`, {
-          auth: true,
-        }).catch(() => null);
-        const url = p?.playback || item?.video_url || "";
-        const abs = url.startsWith("http") ? url : `${API_BASE}${url}`;
-        if (live) setPlayUrl(abs);
-      } catch {
-        nav("/login");
-      }
+      // item henüz yoksa src hesaplama —bekle—
+      if (!item) return;
+      // Önce playback URL'ini dene
+      const p = await api<{ playback: string }>(`/api/courses/${id}/play`, { auth: true })
+        .catch(() => null);
+      const candidate = p?.playback || item.video_url;
+      if (!candidate) return; // güvenlik
+      if (live) setPlayUrl(toAbs(candidate));
     })();
     return () => {
       live = false;
     };
-  }, [id, item?.video_url]);
+  }, [id, item]);
 
   return (
     <>
@@ -78,7 +78,21 @@ export default function CoursesWatch() {
         {(loading || !playUrl) && <p className="muted">Yükleniyor…</p>}
         {item && playUrl && (
           <article className="watch-card">
-            <VideoPlayer src={playUrl} />
+            {
+              isHls(playUrl)
+                ? <VideoPlayer key={playUrl} src={playUrl} />
+                : (
+                  <video
+                    key={playUrl}
+                    className="course-video"
+                    controls
+                    preload="metadata"
+                    // Eğer video farklı origin'den geliyorsa ve cookie/cors gerekiyorsa:
+                    // crossOrigin="use-credentials"
+                    src={playUrl}
+                  />
+                )
+            }
             {item.detail && <p className="course-desc">{item.detail}</p>}
           </article>
         )}

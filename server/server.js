@@ -21,6 +21,13 @@ for (const k of REQ) {
 }
 
 
+const PLAYBACK_SECRET = process.env.PLAYBACK_SECRET || "dev-playback-secret";
+const PLAYBACK_TTL = Number(process.env.PLAYBACK_TTL || 90); // saniye
+const VIDEO_ROOT = process.env.VIDEO_ROOT || path.join(__dirname, "uploads", "courses");
+
+// (Opsiyonel) tek kullanımlık jti takibi (memory). Prod: DB kullan.
+const usedJtis = new Set();
+
 const {
   PORT = 1002,
   CLIENT_ORIGIN = "http://localhost:1001",
@@ -57,6 +64,92 @@ const verifyRefresh = (t) => jwt.verify(t, JWT_REFRESH_SECRET);
 
 const COURSES_DIR = path.join(__dirname, "courses", "video");
 const JWT_SECRET = process.env.JWT_SECRET || "dev_secret";
+
+
+// ! BLOB
+
+// helper: make token (payload contains cid course id, jti)
+function makePlaybackToken({ userId, courseId }) {
+  const jti = Math.random().toString(36).slice(2);
+  const payload = { sub: String(userId), cid: String(courseId), jti };
+  return {
+    token: jwt.sign(payload, PLAYBACK_SECRET, { expiresIn: `${PLAYBACK_TTL}s` }),
+    jti,
+    expiresIn: PLAYBACK_TTL,
+  };
+}
+
+function verifyPlaybackToken(token) {
+  try {
+    return jwt.verify(token, PLAYBACK_SECRET);
+  } catch (e) {
+    return null;
+  }
+}
+
+// async function getInternalVideoPath(courseId) {
+//   const [rows] = await pool.query('SELECT internal_path, video_url FROM courses WHERE id=?', [courseId]);
+//   if (!rows || !rows.length) return null;
+//   const row = rows[0];
+//   if (row.internal_path) return row.internal_path;
+//   else if (row.video_url) return path.join(__dirname, 'public_videos', path.basename(row.video_url));
+//   return null;
+
+//   // === Basit fallback: eğer courses.video_url zaten server-relative dosya ise aynısını kullan:
+//   // (Kendi DB sorgunu buraya yerleştir)
+//   // throw new Error("getInternalVideoPath not implemented — implement DB lookup for courseId");
+// }
+
+async function getInternalVideoPath(courseId) {
+  const [rows] = await pool.query(
+    "SELECT video_url FROM courses WHERE id = ? LIMIT 1",
+    [courseId]
+  );
+  if (!rows || rows.length === 0) return null;
+
+  const url = rows[0].video_url || "";
+  // url HTTP ile başlıyorsa: (ör. CDN) -> burada doğrudan stream etmek istemiyorsan
+  // bu durumda dosyanın gerçek adı/url map’ini DB’de tutmalısın.
+  if (/^https?:\/\//i.test(url)) {
+    // Örn: DB’ye internal_name eklediğinde:
+    // const [r2] = await pool.query("SELECT internal_name FROM courses WHERE id=?", [courseId]);
+    // return path.join(VIDEO_ROOT, r2[0].internal_name);
+    return null; // Şimdilik engelle
+  }
+
+  // '/courses/1761495...mp4' gibi bir şeyse:
+  const fileName = path.basename(url);
+  const full = path.join(VIDEO_ROOT, fileName);
+  return full;
+}
+
+async function checkUserCanViewCourse(userId, courseId) {
+  if (!userId) return false;
+
+  // admin mi?
+  const [u] = await pool.query(
+    "SELECT role, is_admin FROM users WHERE id = ? LIMIT 1",
+    [userId]
+  );
+  if (u.length && (u[0].role === "admin" || u[0].is_admin === 1)) return true;
+
+  // Satın alma / üyelik tablosu (adını kendine göre değiştir)
+  // Örn bir tablo: course_enrollments(user_id INT, course_id INT, active TINYINT)
+  try {
+    const [en] = await pool.query(
+      "SELECT 1 FROM course_enrollments WHERE user_id=? AND course_id=? AND (active=1 OR active IS NULL) LIMIT 1",
+      [userId, courseId]
+    );
+    if (en.length) return true;
+  } catch (e) {
+    // Eğer tablo yoksa kullanıcıya açık kurslar olabilir; şimdilik false yerine true yapabilirsin.
+    // return true;
+  }
+  return false;
+}
+
+
+// BLOB
 
 function requireAuth(req, res, next) {
   if (req.user && req.user.id) return next();
@@ -1346,25 +1439,24 @@ app.get("/api/courses/:id", requireAuth, async (req, res) => {
   }
 });
 
-// --- GET /api/courses/:id/play  => { playback }
-app.get("/api/courses/:id/play", requireAuth, async (req, res) => {
-  try {
-    const [rows] = await pool.query(
-      "SELECT video_url FROM courses WHERE id=? LIMIT 1",
-      [req.params.id]
-    );
-    if (!rows[0]) return res.status(404).json({ error: "not_found" });
-    const videoUrl = rows[0].video_url;
+// app.get("/api/courses/:id/play", requireAuth, async (req, res) => {
+//   try {
+//     const [rows] = await pool.query(
+//       "SELECT video_url FROM courses WHERE id=? LIMIT 1",
+//       [req.params.id]
+//     );
+//     if (!rows[0]) return res.status(404).json({ error: "not_found" });
+//     const videoUrl = rows[0].video_url;
 
-    // DB’de /courses/video/... olarak tutuluyor
-    const playback = videoUrl.startsWith("http") ? videoUrl : `${videoUrl}`;
+//     // DB’de /courses/video/... olarak tutuluyor
+//     const playback = videoUrl.startsWith("http") ? videoUrl : `${videoUrl}`;
 
-    res.json({ playback });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: "course_play_fail" });
-  }
-});
+//     res.json({ playback });
+//   } catch (e) {
+//     console.error(e);
+//     res.status(500).json({ error: "course_play_fail" });
+//   }
+// });
 
 // genel hata yakalayıcı
 // app.use((err, req, res, next) => {
@@ -1373,6 +1465,73 @@ app.get("/api/courses/:id/play", requireAuth, async (req, res) => {
 //   const status = (err && (Number(err.statusCode) || Number(err.status))) || 500;
 //   res.status(status).json({ error: err.message || "Sunucu hatası" });
 // });
+
+
+app.get("/api/courses/:id/play", requireAuth, async (req, res) => {
+  try {
+    const courseId = req.params.id;
+    const userId = req.user.id;
+
+    const allowed = await checkUserCanViewCourse(userId, courseId);
+    if (!allowed) return res.status(403).json({ error: "forbidden" });
+
+    const { token, jti } = makePlaybackToken({ userId, courseId });
+    // Tek kullanımlık istersen:
+    usedJtis.add(jti);
+    setTimeout(() => usedJtis.delete(jti), (PLAYBACK_TTL + 5) * 1000);
+
+    const playbackUrl = `/api/courses/${courseId}/stream?token=${encodeURIComponent(token)}`;
+    return res.json({ playback: playbackUrl, expiresIn: PLAYBACK_TTL });
+  } catch (err) {
+    console.error("play error", err);
+    return res.status(500).json({ error: "internal_error" });
+  }
+});
+
+app.get("/api/courses/:id/stream", async (req, res) => {
+  try {
+    const token = req.query.token || req.headers["x-playback-token"];
+    const data = token ? verifyPlaybackToken(token) : null;
+    if (!data) return res.status(401).end();
+    if (String(data.cid) !== String(req.params.id)) return res.status(403).end();
+    if (data.jti && !usedJtis.has(data.jti)) return res.status(401).end(); // tek kullanımlık
+
+    const filePath = await getInternalVideoPath(req.params.id);
+    if (!filePath || !fs.existsSync(filePath)) return res.status(404).end();
+
+    const stat = fs.statSync(filePath);
+    const fileSize = stat.size;
+    const range = req.headers.range;
+
+    if (range) {
+      const [s, e] = range.replace(/bytes=/, "").split("-");
+      const start = parseInt(s, 10);
+      const end = e ? parseInt(e, 10) : fileSize - 1;
+      if (start >= fileSize) {
+        res.status(416).set("Content-Range", `bytes */${fileSize}`).end();
+        return;
+      }
+      res.writeHead(206, {
+        "Content-Range": `bytes ${start}-${end}/${fileSize}`,
+        "Accept-Ranges": "bytes",
+        "Content-Length": String(end - start + 1),
+        "Content-Type": "video/mp4",
+        "Cache-Control": "private, max-age=0, no-transform",
+      });
+      fs.createReadStream(filePath, { start, end }).pipe(res);
+    } else {
+      res.writeHead(200, {
+        "Content-Length": String(fileSize),
+        "Content-Type": "video/mp4",
+        "Accept-Ranges": "bytes",
+      });
+      fs.createReadStream(filePath).pipe(res);
+    }
+  } catch (err) {
+    console.error("stream error", err);
+    if (!res.headersSent) res.status(500).end();
+  }
+});
 
 // requireAuth ardından gelen ortak middleware (opsiyonel, ama faydalı)
 app.use((req, _res, next) => {
