@@ -26,6 +26,7 @@ export default function PostEditor() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [slugTouched, setSlugTouched] = useState(false); // slug duzeltmesi
 
   const [f, setF] = useState<Form>({
     title: "",
@@ -61,8 +62,8 @@ export default function PostEditor() {
           apiFetch(`${API_BASE}/api/admin/pages`).then((r) => r.json()),
           editing
             ? apiFetch(`${API_BASE}/api/admin/posts/${id}`).then((r) =>
-                r.json()
-              )
+              r.json()
+            )
             : Promise.resolve(null),
         ]);
         setPages(pg.pages as PageOpt[]);
@@ -92,10 +93,11 @@ export default function PostEditor() {
   }, [id, editing]);
 
   // slug oto (başlıktan) – kullanıcı elle değiştirdiyse dokunmaz
-  const canAutoSlug = useMemo(
-    () => !editing && f.slug.trim() === "",
-    [editing, f.slug]
-  );
+  // const canAutoSlug = useMemo(
+  //   () => !editing && f.slug.trim() === "",
+  //   [editing, f.slug]
+  // );
+  const canAutoSlug = useMemo(() => !editing && !slugTouched, [editing, slugTouched]);
   useEffect(() => {
     if (canAutoSlug && f.title) setF((s) => ({ ...s, slug: toSlug(f.title) }));
   }, [f.title, canAutoSlug]);

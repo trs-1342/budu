@@ -1,16 +1,16 @@
+// src/admin/lib/auth.ts
 const API = import.meta.env.VITE_API_BASE || "http://localhost:1002";
+
+export const API_BASE = API;
 
 export function getAccess(): string | null {
   return localStorage.getItem("access") || sessionStorage.getItem("access");
 }
 
 export function saveAccess(token: string) {
-  // “Beni hatırla” ile hangisine yazdın bilmiyorum; ikisine de yazıp
-  // biri yoksa diğeri kalsın yaklaşımı:
   if (localStorage.getItem("access")) localStorage.setItem("access", token);
-  else if (sessionStorage.getItem("access"))
-    sessionStorage.setItem("access", token);
-  else localStorage.setItem("access", token); // default
+  else if (sessionStorage.getItem("access")) sessionStorage.setItem("access", token);
+  else localStorage.setItem("access", token);
 }
 
 export async function refreshAccess(): Promise<string | null> {
@@ -20,21 +20,20 @@ export async function refreshAccess(): Promise<string | null> {
   });
   if (!r.ok) return null;
   const d = await r.json().catch(() => ({}));
-  if (!d?.access) return null;
-  saveAccess(d.access);
-  return d.access as string;
+  const access = d?.access || d?.token;
+  if (!access) return null;
+  saveAccess(access);
+  return access as string;
 }
 
-/**
- * Bearer header ile istek atar. 401 gelirse bir kere refresh dener, tekrar dener.
- */
+/** Bearer + 401'de bir kez refresh deneyen fetch wrapper */
 export async function apiFetch(
   input: RequestInfo | URL,
   init: RequestInit = {}
 ) {
-  const token = getAccess();
   const headers = new Headers(init.headers || {});
-  if (token) headers.set("Authorization", `Bearer ${token}`);
+  const t = getAccess();
+  if (t) headers.set("Authorization", `Bearer ${t}`);
 
   let res = await fetch(input instanceof URL ? input.toString() : input, {
     ...init,
@@ -43,9 +42,9 @@ export async function apiFetch(
   });
 
   if (res.status === 401) {
-    const newToken = await refreshAccess();
-    if (newToken) {
-      headers.set("Authorization", `Bearer ${newToken}`);
+    const newT = await refreshAccess();
+    if (newT) {
+      headers.set("Authorization", `Bearer ${newT}`);
       res = await fetch(input instanceof URL ? input.toString() : input, {
         ...init,
         headers,
@@ -55,5 +54,3 @@ export async function apiFetch(
   }
   return res;
 }
-
-export const API_BASE = API;

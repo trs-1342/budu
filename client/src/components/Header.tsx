@@ -1,5 +1,6 @@
 import "../css/Header.css";
 import buduLogo from "../assets/buduLogo.svg";
+import { Link } from "react-router-dom";
 
 function isAuthed() {
   return !!localStorage.getItem("token");
@@ -12,7 +13,9 @@ function Header() {
       <div>
         <nav>
           <span id="span-project-button">
-            <button id="project-button"> هل لديك مشروع؟</button>
+            <Link to="mailto:jolanar444@gmail.com" id="project-button" style={{ textDecoration: "none" }}>
+              هل لديك مشروع؟
+            </Link>
           </span>
           <ul>
             <li>

@@ -8,7 +8,7 @@ const jwt = require("jsonwebtoken");
 const ms = require("ms");
 const fs = require("fs");
 const path = require("path");
-require("dotenv").config({ path: path.resolve(process.cwd(), ".env.local") });
+require("dotenv").config({ path: path.resolve(process.cwd(), ".env") });
 const multer = require("multer");
 const { customAlphabet } = require("nanoid");
 const mime = require("mime-types");
