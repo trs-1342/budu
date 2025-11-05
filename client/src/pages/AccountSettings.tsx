@@ -1,39 +1,36 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { replace, useNavigate } from "react-router-dom";
 import "../css/Account.css";
-import { api, getToken } from "../lib/api";
+import { api, getToken, getAccess } from "../lib/api";
 
 type Me = {
   id: number;
   email: string;
   username: string;
   phone?: string;
-  countryDial?: string;
   membershipNotify?: boolean;
 };
 
 export default function AccountSettings() {
   const nav = useNavigate();
-  const [tab, setTab] = useState<"account" | "settings">("account");
   const [loading, setLoading] = useState(true);
   const [me, setMe] = useState<Me | null>(null);
-
-  // düzenlenebilir alanlar
   const [phone, setPhone] = useState("");
+  const [notify, setNotify] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
 
   // şifre
   const [curPass, setCurPass] = useState("");
   const [newPass, setNewPass] = useState("");
-  const [newPass2, setNewPass2] = useState("");
   const [showCur, setShowCur] = useState(false);
   const [showNew, setShowNew] = useState(false);
-  const [showNew2, setShowNew2] = useState(false);
 
-  // membership notify
-  const [notify, setNotify] = useState(false);
+  // hesap silme
+  const [deleteMode, setDeleteMode] = useState(false);
+  const [delPass, setDelPass] = useState("");
 
   useEffect(() => {
-    if (!getToken()) {
+    if (!getAccess() && !getToken()) {
       nav("/login", { replace: true });
       return;
     }
@@ -43,15 +40,9 @@ export default function AccountSettings() {
         setMe(data);
         setPhone(data.phone || "");
         setNotify(!!data.membershipNotify);
-      } catch (e: any) {
-        // 401/403 → oturumsuz; diğer hatalarda uyarı göster
-        const msg = e?.message?.toLowerCase?.() || "";
-        if (msg.includes("unauthorized") || msg.includes("401") || msg.includes("forbidden") || msg.includes("403")) {
-          nav("/login", { replace: true });
-          return;
-        }
-        console.error(e);
-        alert("Hesap bilgileri alınamadı.");
+        setTheme(data.theme === "dark" ? "dark" : "light");
+      } catch {
+        nav("/login", { replace: true });
       } finally {
         setLoading(false);
       }
@@ -65,9 +56,9 @@ export default function AccountSettings() {
         auth: true,
         body: { phone },
       });
-      alert("Profil güncellendi.");
+      alert("Telefon güncellendi.");
     } catch (e: any) {
-      alert(e?.message || "Güncelleme başarısız.");
+      alert(e.message || "Güncelleme başarısız.");
     }
   }
 
@@ -75,7 +66,6 @@ export default function AccountSettings() {
     try {
       if (newPass.length < 6)
         throw new Error("Yeni şifre en az 6 karakter olmalı.");
-      if (newPass !== newPass2) throw new Error("Yeni şifreler eşleşmiyor.");
       await api("/api/account/user-change-password", {
         method: "POST",
         auth: true,
@@ -83,14 +73,13 @@ export default function AccountSettings() {
       });
       setCurPass("");
       setNewPass("");
-      setNewPass2("");
       alert("Şifre değiştirildi.");
     } catch (e: any) {
-      alert(e?.message || "Şifre değiştirilemedi.");
+      alert(e.message || "Şifre değiştirilemedi.");
     }
   }
 
-  async function toggleMembershipNotify(next: boolean) {
+  async function toggleNotify(next: boolean) {
     try {
       await api("/api/account/user-notify-membership", {
         method: "POST",
@@ -99,21 +88,48 @@ export default function AccountSettings() {
       });
       setNotify(next);
     } catch (e: any) {
-      alert(e?.message || "Tercih kaydedilemedi.");
+      alert(e.message || "Tercih kaydedilemedi.");
     }
   }
 
   async function deleteAccount() {
-    const ok = prompt('Hesabı kalıcı olarak silmek için "SİL" yazınız.');
-    if (ok !== "SİL") return;
     try {
-      await api("/api/account/user-delete", { method: "DELETE", auth: true });
+      await api("/api/account/user-delete", {
+        method: "DELETE",
+        auth: true,
+        body: { password: delPass },
+      });
       localStorage.removeItem("token");
-      localStorage.removeItem("me");
       alert("Hesabın silindi.");
       nav("/", { replace: true });
     } catch (e: any) {
-      alert(e?.message || "Silme başarısız.");
+      alert(e.message || "Silme başarısız.");
+    }
+  }
+
+  async function onToggleNotify(next: boolean) {
+    try {
+      await api("/api/account/user-update", {
+        method: "PATCH",
+        body: { membershipNotify: next },
+      });
+      setNotify(next);
+    } catch (e: any) {
+      alert(e?.message || "Tercih kaydedilemedi.");
+    }
+  }
+
+  async function onChangeTheme(next: "light" | "dark") {
+    const prev = theme;
+    setTheme(next); // UI anlık değişsin
+    try {
+      await api("/api/account/user-update", {
+        method: "PATCH",
+        body: { theme: next },
+      });
+    } catch (e: any) {
+      setTheme(prev); // geri al
+      alert(e?.message || "Tema kaydedilemedi.");
     }
   }
 
@@ -126,188 +142,194 @@ export default function AccountSettings() {
   if (!me) return null;
 
   return (
-    <div className="account-wrapper">
-      <div className="account-layout reveal reveal--up">
-        {/* SOL MENÜ */}
-        <aside className="side">
-          <button
-            className="side-item"
-            onClick={() => {
-              window.location.replace("/");
-            }}
-          >
-            Ana Sayfa
-          </button>
-          <button
-            className={`side-item ${tab === "account" ? "active" : ""}`}
-            onClick={() => setTab("account")}
-          >
-            Hesap
-          </button>
-          {/* <button
-            className={`side-item ${tab === "settings" ? "active" : ""}`}
-            onClick={() => setTab("settings")}
-          >
-            Ayarlar
-          </button> */}
-        </aside>
+    <div className={`account-page ${theme}`}>
+      <header className="account-header">
+        <button className="home-btn" onClick={() => nav("/", { replace: true })}>
+          🏠
+        </button>
+        <h2>Hesap Ayarları</h2>
+      </header>
 
-        {/* İÇERİK */}
-        <section className="content">
-          {tab === "account" && (
-            <div className="stack">
-              {/* ÖZET */}
-              <div className="panel panel-form">
-                <h3>Hesap Özeti</h3>
-                <p>
-                  Sadece Telefon numaranızı düzenleyebilirsiniz.
-                </p>
-                <br />
-                <div className="grid">
-                  <div>
-                    <label>E-posta</label>
-                    <input value={me.email} disabled />
-                  </div>
-                  <div>
-                    <label>Kullanıcı Adı</label>
-                    <input value={me.username} disabled />
-                  </div>
-                  <div>
-                    <label>Telefon (opsiyonel)</label>
-                    <input
-                      placeholder="5xx xxx xx xx veya +90…"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="row-end">
-                  <button className="primary-btn" onClick={saveProfile}>
-                    Kaydet
-                  </button>
-                </div>
+      <main className="account-container">
+        {/* kullanıcı bilgileri */}
+        <section className="card">
+          <h3>Kullanıcı Bilgileri</h3>
+          <div className="grid">
+            <div>
+              <label>E-posta</label>
+              <input id="disableinp" value={me.email} disabled />
+            </div>
+            <div>
+              <label>Kullanıcı Adı</label>
+              <input id="disableinp" value={me.username} disabled />
+            </div>
+            <div>
+              <label>Telefon</label>
+              <input
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+90..."
+              />
+            </div>
+          </div>
+          <div className="row-end">
+            <button onClick={saveProfile}>Kaydet</button>
+          </div>
+        </section>
+
+        {/* şifre */}
+        <section className="card">
+          <h3>Şifre Değiştir</h3>
+          <div className="grid">
+            <div>
+              <label>Mevcut Şifre</label>
+              <div className="input-affix">
+                <input
+                  type={showCur ? "text" : "password"}
+                  value={curPass}
+                  onChange={(e) => setCurPass(e.target.value)}
+                />
+                <button onClick={() => setShowCur((s) => !s)}>👁</button>
+              </div>
+            </div>
+            <div>
+              <label>Yeni Şifre</label>
+              <div className="input-affix">
+                <input
+                  type={showNew ? "text" : "password"}
+                  value={newPass}
+                  onChange={(e) => setNewPass(e.target.value)}
+                />
+                <button onClick={() => setShowNew((s) => !s)}>👁</button>
+              </div>
+            </div>
+          </div>
+          <div className="row-end">
+            <button className="secondary" onClick={changePassword}>
+              Güncelle
+            </button>
+          </div>
+        </section>
+
+        {/* ayarlar */}
+        {/* <section className="card">
+          <h3>Ayarlar</h3>
+          <div className="settings-row">
+            <div>
+              <label>Bildirimler</label>
+              <label className="switch">
+                <input
+                  type="checkbox"
+                  checked={notify}
+                  onChange={(e) => toggleNotify(e.target.checked)}
+                />
+                <span className="slider" />
+              </label>
+            </div>
+
+            <div>
+              <label>Tema</label>
+              <select
+                value={theme}
+                onChange={(e) =>
+                  setTheme(e.target.value as "light" | "dark")
+                }
+              >
+                <option value="light">Açık</option>
+                <option value="dark">Koyu</option>
+              </select>
+            </div>
+          </div>
+        </section> */}
+
+        {/* hesap silme */}
+
+        <div className="panel panel-form">
+          <h3>Ayarlar</h3>
+
+          <div className="settings-list">
+            {/* Bildirimler */}
+            <div className="setting-item">
+              <div className="setting-text">
+                <div className="setting-title">Bildirimler</div>
+                <div className="setting-desc">Yeni yazı veya video yayınlandığında bilgi ver.</div>
               </div>
 
-              {/* ŞİFRE */}
-              <div className="panel panel-form panel-password">
-                <h3>Şifre Değiştir</h3>
+              <button
+                type="button"
+                className={`toggle ${notify ? "on" : ""}`}
+                aria-pressed={notify}
+                aria-label={notify ? "Bildirimleri kapat" : "Bildirimleri aç"}
+                onClick={() => onToggleNotify(!notify)}
+              >
+                <span className="track" />
+                <span className="thumb" />
+              </button>
+            </div>
 
-                <div className="form-grid form-grid-3">
-                  <div className="field">
-                    <label>Mevcut Şifre</label>
-                    <div className="input-affix">
-                      <input
-                        type={showCur ? "text" : "password"}
-                        value={curPass}
-                        onChange={(e) => setCurPass(e.target.value)}
-                      />
-                      <button
-                        type="button"
-                        className="input-suffix-btn"
-                        onClick={() => setShowCur((s) => !s)}
-                        aria-label={
-                          showCur ? "Şifreyi gizle" : "Şifreyi göster"
-                        }
-                        title={showCur ? "Gizle" : "Göster"}
-                      >
-                        👁
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="field">
-                    <label>Yeni Şifre</label>
-                    <div className="input-affix">
-                      <input
-                        type={showNew ? "text" : "password"}
-                        value={newPass}
-                        onChange={(e) => setNewPass(e.target.value)}
-                      />
-                      <button
-                        type="button"
-                        className="input-suffix-btn"
-                        onClick={() => setShowNew((s) => !s)}
-                        aria-label={
-                          showNew ? "Şifreyi gizle" : "Şifreyi göster"
-                        }
-                        title={showNew ? "Gizle" : "Göster"}
-                      >
-                        👁
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="field">
-                    <label>Yeni Şifre (tekrar)</label>
-                    <div className="input-affix">
-                      <input
-                        type={showNew2 ? "text" : "password"}
-                        value={newPass2}
-                        onChange={(e) => setNewPass2(e.target.value)}
-                      />
-                      <button
-                        type="button"
-                        className="input-suffix-btn"
-                        onClick={() => setShowNew2((s) => !s)}
-                        aria-label={
-                          showNew2 ? "Şifreyi gizle" : "Şifreyi göster"
-                        }
-                        title={showNew2 ? "Gizle" : "Göster"}
-                      >
-                        👁
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="row-end">
-                  <button className="secondary-btn" onClick={changePassword}>
-                    Şifreyi Güncelle
-                  </button>
-                </div>
+            {/* Tema */}
+            <div className="setting-item">
+              <div className="setting-text">
+                <div className="setting-title">Tema</div>
+                <div className="setting-desc">Bu ayar sadece bu sayfada uygulanır.</div>
               </div>
 
-              {/* ÜYELİK BİLGİLENDİRME */}
-              <div className="panel panel-form">
-                <h3>Üyelik Bilgilendirme Talebi</h3>
-                <p>
-                  İleride para yatırmalı üyelik sistemi aktif olduğunda e-posta
-                  ile bilgilendirilmek istersen bu anahtarı aç.
-                </p>
-                <label className="switch">
-                  <input
-                    type="checkbox"
-                    checked={notify}
-                    onChange={(e) => toggleMembershipNotify(e.target.checked)}
-                  />
-                  <span className="slider" />
-                </label>
+              <div className="seg" role="tablist" aria-label="Tema seçici">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={theme === "light"}
+                  className={`seg-btn ${theme === "light" ? "active" : ""}`}
+                  onClick={() => onChangeTheme("light")}
+                  title="Açık tema"
+                >
+                  ☀️ <span>Açık</span>
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={theme === "dark"}
+                  className={`seg-btn ${theme === "dark" ? "active" : ""}`}
+                  onClick={() => onChangeTheme("dark")}
+                  title="Koyu tema"
+                >
+                  🌙 <span>Koyu</span>
+                </button>
               </div>
+            </div>
+          </div>
+        </div>
 
-              {/* HESABI SİL */}
-              <div className="panel danger">
-                <h3>Hesabı Sil</h3>
-                <p>
-                  Bu işlem geri alınamaz. Tüm verilerin kalıcı olarak silinir.
-                </p>
+
+        <section className="card danger">
+          <h3>Hesabı Sil</h3>
+          {!deleteMode && (
+            <button
+              className="danger-btn"
+              onClick={() => setDeleteMode(true)}
+            >
+              Hesabı Sil
+            </button>
+          )}
+          {deleteMode && (
+            <div className="delete-box">
+              <p>Şifreni girerek hesabını kalıcı olarak silebilirsin:</p>
+              <input
+                type="password"
+                placeholder="Şifre"
+                value={delPass}
+                onChange={(e) => setDelPass(e.target.value)}
+              />
+              <div className="row-end">
+                <button onClick={() => setDeleteMode(false)}>Vazgeç</button>
                 <button className="danger-btn" onClick={deleteAccount}>
-                  Hesabımı Sil
+                  Onayla ve Sil
                 </button>
               </div>
             </div>
           )}
-
-          {tab === "settings" && (
-            <div className="panel panel-form">
-              <h3>Ayarlar</h3>
-              <p>
-                Şimdilik boş. (Öneri: Bildirim tercihleri, dil/tema, oturum
-                yönetimi, güvenlik kayıtları, 2FA.)
-              </p>
-            </div>
-          )}
         </section>
-      </div>
+      </main>
     </div>
   );
 }

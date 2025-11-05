@@ -79,7 +79,8 @@ export default function Login() {
       // token varsa kaydet
       const token = resp?.token || resp?.access || resp?.accessToken;
       if (token) {
-        localStorage.setItem("token", token);
+        Api.saveAccess(token);   // <-- asıl kritik satır
+        localStorage.setItem("token", token); // backward compatibility
       }
       localStorage.setItem("remember_me", remember ? "1" : "0");
       nav("/account", { replace: true }); // istersen "/" yap

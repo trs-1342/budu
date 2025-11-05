@@ -1,299 +1,347 @@
-.account-wrapper {
+/* =========================
+   Account.css  (tam dosya)
+   ========================= */
+
+.account-page {
+  font-family: "Inter", system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Fira Code", monospace;
   min-height: 100vh;
-  background: #f8fafc;
-  padding: 28px;
+  padding: 56px 24px 32px;
+  /* üsten boşluk artırıldı */
+  background-color: var(--bg);
+  color: var(--fg);
+  transition: background-color .25s ease, color .25s ease;
 
-  font-family: "Fira Code" ,'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
-}
-.account-layout {
-  max-width: 1120px;
-  margin: 0 auto;
-  display: grid;
-  grid-template-columns: 240px 1fr;
-  gap: 18px;
-}
+  /* LIGHT varsayılanları */
+  --bg: #ffffff;
+  /* sayfa zemini */
+  --fg: #0b0b0b;
+  /* sayfa metni */
+  --panel-bg: #ffffff;
+  /* kart zemini */
+  --panel-fg: #0b0b0b;
+  /* kart metni */
+  --border: #e5e7eb;
+  /* kart sınırı */
+  --input-bg: #ffffff;
+  --input-fg: #0b0b0b;
 
-.side {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
-  padding: 10px;
-  display: grid;
-  gap: 6px;
-  height: fit-content;
-  position: sticky;
-  top: 24px;
-}
-.side-item {
-  border: none;
-  background: transparent;
-  height: 44px;
-  border-radius: 12px;
-  display: grid;
-  place-items: center;
-  font-weight: 800;
-  color: #334155;
-  cursor: pointer;
-}
-.side-item.active {
-  background: #0f172a;
-  color: #fff;
+  --btn-bg: #000000;
+  /* ana buton */
+  --btn-fg: #ffffff;
+
+  --toggle-off: #d1d5db;
+  /* switch kapalı */
+  --toggle-on: #22c55e;
+  /* switch açık */
+  --focus: rgba(17, 17, 17, .35);
 }
 
-.content {
-  display: grid;
-  gap: 16px;
-}
-.stack {
-  display: grid;
-  gap: 16px;
+.account-page.dark {
+  --bg: #000000;
+  /* simsiyah */
+  --fg: #ffffff;
+  /* sayfa üstündeki metinler */
+
+  /* Koyu temada içerik panelleri “karartılmış kart” gibi */
+  --panel-bg: #0f0f0f;
+  /* koyu gri kart zemini */
+  --panel-fg: #ffffff;
+  /* kart metni beyaz */
+  --border: #2a2a2a;
+  /* hafif gri ayırt edici sınır */
+  --input-bg: #151515;
+  /* input zemini karttan bir ton açık */
+  --input-fg: #ffffff;
+
+  --btn-bg: #ffffff;
+  /* butonlar beyaz */
+  --btn-fg: #000000;
+  /* buton metni siyah */
+
+  --toggle-off: #555;
+  /* kapalı gri */
+  --toggle-on: #22c55e;
+  /* açık yeşil */
+  --focus: rgba(255, 255, 255, .35);
 }
 
-.panel {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
-  padding: 16px;
-}
-.panel h3 {
-  margin: 0 0 10px;
-}
-.panel.danger {
-  border-color: #fecaca;
-  background: #fff1f2;
-}
-
-.grid {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-}
-.grid input {
-  height: 44px;
-  padding: 0 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-}
-.row-end {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.switch {
-  position: relative;
-  width: 56px;
-  height: 32px;
-  display: inline-block;
-}
-.switch input {
-  display: none;
-}
-.switch .slider {
-  position: absolute;
-  inset: 0;
-  background: #cbd5e1;
-  border-radius: 999px;
-  transition: 0.2s;
-}
-.switch .slider::after {
-  content: "";
-  position: absolute;
-  width: 24px;
-  height: 24px;
-  top: 4px;
-  left: 4px;
-  background: #fff;
-  border-radius: 999px;
-  transition: 0.2s;
-}
-.switch input:checked + .slider {
-  background: #0ea5e9;
-}
-.switch input:checked + .slider::after {
-  transform: translateX(24px);
-}
-
-.primary-btn,
-.secondary-btn,
-.danger-btn {
-  height: 44px;
-  padding: 0 16px;
-  border-radius: 12px;
-  border: none;
-  cursor: pointer;
-  font-weight: 800;
-}
-.primary-btn {
-  background: #111827;
-  color: #fff;
-}
-.secondary-btn {
-  background: #334155;
-  color: #fff;
-}
-.danger-btn {
-  background: #d32f2f;
-  color: #fff;
-}
-/*  */
-/* .welcome-hero {
-  background: linear-gradient(90deg, #f0f9ff, #ecfeff, #f0fdf4);
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
-  padding: 14px 16px;
-  font-weight: 700;
-  color: #0f172a;
+/* Başlık */
+.account-header {
   display: flex;
   align-items: center;
-  gap: 10px;
-  animation: welcome-pop 0.5s ease, welcome-fade 4s ease forwards;
-}
-.welcome-hero .sparkle {
-  filter: saturate(1.3);
-}
-@keyframes welcome-pop {
-  from {
-    transform: scale(0.98);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-@keyframes welcome-fade {
-  0%,
-  80% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-  }
-} */
-
-/* ! */
-
-/* Account sayfasında reveal animasyonu: sadece içeri girerken oynat, sonunda görünür kalsın */
-@keyframes revealUpIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  gap: 12px;
+  margin-bottom: 16px;
+  color: var(--fg);
 }
 
-/* Var olan (global) kurallar ne olursa olsun Account'ta final state görünür kalsın */
-.account-wrapper .reveal.reveal--up {
-  animation: revealUpIn 0.35s ease both !important; /* both = final state tutulur */
-  opacity: 1 !important;
-  transform: none !important;
+.home-btn {
+  font-size: 22px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--fg);
 }
-/* !! */
 
-/* --- Form düzeni & estetik --- */
-.panel-form h3 {
+/* İç kolon */
+.account-container {
+  display: grid;
+  gap: 28px;
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+/* === KART / PANEL ===
+   “Kullanıcı Bilgileri”, “Şifre Değiştir”, “Ayarlar”, “Hesabı Sil” hepsi aynı görünür */
+.card,
+.panel {
+  background: var(--panel-bg);
+  color: var(--panel-fg);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 20px;
+  display: grid;
+  gap: 18px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .08);
+}
+
+/* Tepe başlıkları */
+h3 {
+  margin: 0;
   font-size: 18px;
   font-weight: 800;
-  letter-spacing: 0.2px;
-  margin: 0 0 12px;
+  color: var(--panel-fg);
 }
 
-.field {
+/* Grid yerleşim */
+.grid {
   display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.grid>div {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
 }
-.field label {
+
+label {
   font-weight: 700;
-  color: #0f172a;
+  opacity: .95;
+  color: var(--panel-fg);
 }
 
-.form-grid {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(2, minmax(260px, 1fr));
-}
-.form-grid.form-grid-3 {
-  grid-template-columns: repeat(3, minmax(220px, 1fr));
-}
-
-/* responsive hizalama */
-@media (max-width: 1024px) {
-  .form-grid.form-grid-3 {
-    grid-template-columns: repeat(2, minmax(220px, 1fr));
-  }
-}
-@media (max-width: 640px) {
-  .form-grid,
-  .form-grid.form-grid-3 {
-    grid-template-columns: 1fr;
-  }
+/* Alanlar */
+input,
+select {
+  width: 100%;
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  padding: 0 12px;
+  background: var(--input-bg);
+  color: var(--input-fg);
+  font-size: 15px;
 }
 
+input::placeholder {
+  opacity: .55;
+  color: var(--input-fg);
+}
+
+#disableinp[disabled] {
+  opacity: .75;
+  cursor: not-allowed;
+}
+
+input:focus,
+select:focus,
+button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus);
+}
+
+/* Şifre göz butonları input içinde */
 .input-affix {
   position: relative;
 }
-.input-affix input {
-  width: 100%;
-  height: 44px;
-  padding: 0 42px 0 12px; /* sağda göz butonu için boşluk */
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  background: #f9fafb;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s;
-}
-.input-affix input:focus {
-  outline: none;
-  border-color: #60a5fa;
-  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.25);
-  background: #fff;
-}
-.input-affix input:disabled {
-  color: #6b7280;
-  background: #f3f4f6;
-  border-color: #e5e7eb;
+
+.input-affix>input {
+  padding-right: 48px;
 }
 
-.input-suffix-btn {
+.input-affix>button {
   position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  height: 28px;
+  right: 6px;
+  top: 6px;
+  height: 32px;
   min-width: 36px;
   padding: 0 8px;
-  border: 0;
   border-radius: 8px;
-  background: #e5e7eb;
-  font-weight: 700;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--input-fg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  opacity: 0.9;
-}
-.input-suffix-btn:hover {
-  opacity: 1;
-  background: #d1d5db;
-}
-.input-suffix-btn:active {
-  transform: translateY(-50%) scale(0.98);
 }
 
-/* grid içindeki tüm inputların tutarlı görünmesi için */
-.panel-form .grid input,
-.panel-form .form-grid input {
+/* Kart sonu buton alanı — SAĞA YASLA */
+.row-end {
+  margin-top: 4px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* Global buton */
+.account-page button {
+  border: 1px solid var(--border);
+  border-radius: 12px;
   height: 44px;
-  border-radius: 10px;
+  padding: 0 18px;
+  font-weight: 800;
+  cursor: pointer;
+  background: var(--btn-bg);
+  color: var(--btn-fg);
 }
 
-/* panel alt buton satırı boşluk */
-.panel-form .row-end {
-  margin-top: 12px;
+.account-page button:hover {
+  filter: brightness(1.08);
 }
 
-/* üyelik panelindeki metin ve switch hizası */
-.panel .switch {
-  margin-top: 8px;
+button.secondary {
+  background: color-mix(in oklab, var(--btn-bg) 85%, var(--panel-bg));
+  color: var(--btn-fg);
+}
+
+/* Ayarlar listesi */
+.settings-list {
+  display: grid;
+  gap: 16px;
+}
+
+.setting-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 14px;
+  background: color-mix(in oklab, var(--panel-bg) 92%, var(--fg));
+  border: 1px solid var(--border);
+  color: var(--panel-fg);
+}
+
+.setting-title {
+  font-weight: 800;
+  margin-bottom: 2px;
+}
+
+.setting-desc {
+  opacity: .9;
+  font-size: .95rem;
+}
+
+/* iOS tarzı toggle */
+.toggle {
+  position: relative;
+  inline-size: 56px;
+  block-size: 32px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  border-radius: 999px;
+  cursor: pointer;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.toggle .track {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: var(--toggle-off);
+  transition: background-color .18s ease;
+}
+
+.toggle .thumb {
+  position: absolute;
+  inset-block-start: 3px;
+  inset-inline-start: 3px;
+  inline-size: 26px;
+  block-size: 26px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .25);
+  transform: translateX(0);
+  transition: transform .18s ease;
+}
+
+.toggle.on .track {
+  background: var(--toggle-on);
+}
+
+.toggle.on .thumb {
+  transform: translateX(24px);
+}
+
+.toggle:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--toggle-on) 40%, transparent);
+  border-radius: 999px;
+}
+
+/* Tema seçici */
+.seg {
+  display: inline-grid;
+  grid-auto-flow: column;
+  gap: 8px;
+}
+
+.seg-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--panel-fg);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.seg-btn.active {
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  border-color: var(--btn-bg);
+}
+
+.seg-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus);
+  border-radius: 999px;
+}
+
+/* Danger panel */
+.card.danger {
+  border-color: color-mix(in oklab, #dc2626 50%, var(--border));
+  background: color-mix(in oklab, var(--panel-bg) 80%, #dc2626 20%);
+  color: var(--panel-fg);
+}
+
+/* Küçük ekran detayları */
+@media (max-width: 520px) {
+  .account-page {
+    padding: 40px 16px 24px;
+  }
+
+  .row-end {
+    justify-content: stretch;
+  }
+
+  .account-page button {
+    width: 100%;
+  }
 }
