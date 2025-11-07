@@ -24,10 +24,10 @@ export default function Courses() {
     let live = true;
     (async () => {
       try {
-        await api("/api/account/user-me", { auth: true });
+        await api("/api/account/user-me", { auth: true } as any);
         if (!live) return;
         setAuthed(true);
-        const d = await api<Course[]>("/api/courses", { auth: true });
+        const d = await api<Course[]>("/api/courses", { auth: true } as any);
         if (live) setCourses(d);
       } catch {
         if (live) {
@@ -107,6 +107,10 @@ export default function Courses() {
                         preload="metadata"
                         src={src}
                         className="course-video"
+                        controlsList="nodownload noremoteplayback"
+                        disablePictureInPicture
+                        onContextMenu={(e) => e.preventDefault()}
+                      // referrerPolicy="no-referrer"
                       />
                     )}
                   </div>

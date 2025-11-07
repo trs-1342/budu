@@ -32,7 +32,7 @@ export default function CoursesWatch() {
     let live = true;
     (async () => {
       try {
-        const d = await api<Course>(`/api/courses/${id}`, { auth: true });
+        const d = await api<Course>(`/api/courses/${id}`);
         if (live) setItem(d);
       } catch {
         nav("/courses");
@@ -51,7 +51,7 @@ export default function CoursesWatch() {
       // item henüz yoksa src hesaplama —bekle—
       if (!item) return;
       // Önce playback URL'ini dene
-      const p = await api<{ playback: string }>(`/api/courses/${id}/play`, { auth: true })
+      const p = await api<{ playback: string }>(`/api/courses/${id}/play`)
         .catch(() => null);
       const candidate = p?.playback || item.video_url;
       if (!candidate) return; // güvenlik
@@ -83,13 +83,14 @@ export default function CoursesWatch() {
                 ? <VideoPlayer key={playUrl} src={playUrl} />
                 : (
                   <video
-                    key={playUrl}
-                    className="course-video"
                     controls
                     preload="metadata"
-                    // Eğer video farklı origin'den geliyorsa ve cookie/cors gerekiyorsa:
-                    // crossOrigin="use-credentials"
                     src={playUrl}
+                    className="course-video"
+                    controlsList="nodownload noremoteplayback"
+                    disablePictureInPicture
+                    onContextMenu={(e) => e.preventDefault()}
+                  // referrerPolicy="no-referrer"
                   />
                 )
             }
