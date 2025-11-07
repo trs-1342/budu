@@ -1500,9 +1500,6 @@ app.get("/api/courses/:id", requireUserAuth, async (req, res) => {
 //   }
 // });
 
-// --- /api/courses/:id/play route ---
-// Döndürecek: { playback: "/courses/playback/<token>" }
-// Token kısa süreli (ör: 5 dakika)
 app.get("/api/courses/:id/play", requireAuth, async (req, res) => {
   const courseId = Number(req.params.id);
   // 1) DB'den course al
