@@ -1,6 +1,6 @@
 # Budu Web Site
 
-> **Uyarı:**
+> [!WARNING]
 > Projenin [Commit](https://github.com/trs-1342/budu/commits/) geçmişini kaybettim. 
 
 Bu proje annemin isteği üzerine geliştirilmiş olup, kişisel CV / portfolyo amacı taşımaktadır.  
