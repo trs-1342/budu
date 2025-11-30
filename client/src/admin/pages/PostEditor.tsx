@@ -62,8 +62,8 @@ export default function PostEditor() {
           apiFetch(`${API_BASE}/api/admin/pages`).then((r) => r.json()),
           editing
             ? apiFetch(`${API_BASE}/api/admin/posts/${id}`).then((r) =>
-              r.json()
-            )
+                r.json()
+              )
             : Promise.resolve(null),
         ]);
         setPages(pg.pages as PageOpt[]);
@@ -97,7 +97,10 @@ export default function PostEditor() {
   //   () => !editing && f.slug.trim() === "",
   //   [editing, f.slug]
   // );
-  const canAutoSlug = useMemo(() => !editing && !slugTouched, [editing, slugTouched]);
+  const canAutoSlug = useMemo(
+    () => !editing && !slugTouched,
+    [editing, slugTouched]
+  );
   useEffect(() => {
     if (canAutoSlug && f.title) setF((s) => ({ ...s, slug: toSlug(f.title) }));
   }, [f.title, canAutoSlug]);

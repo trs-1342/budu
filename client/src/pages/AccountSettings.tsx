@@ -144,7 +144,13 @@ export default function AccountSettings() {
   return (
     <div className={`account-page ${theme}`}>
       <header className="account-header">
-        <button className="home-btn" onClick={() => nav("/", { replace: true })}>
+        <button
+          className="home-btn"
+          onClick={() => {
+            // tam sayfa yenilemesi ile ana sayfaya yönlendir
+            window.location.replace("/");
+          }}
+        >
           🏠
         </button>
         <h2>Hesap Ayarları</h2>
@@ -252,7 +258,9 @@ export default function AccountSettings() {
             <div className="setting-item">
               <div className="setting-text">
                 <div className="setting-title">Bildirimler</div>
-                <div className="setting-desc">Yeni yazı veya video yayınlandığında bilgi ver.</div>
+                <div className="setting-desc">
+                  Yeni yazı veya video yayınlandığında bilgi ver.
+                </div>
               </div>
 
               <button
@@ -271,7 +279,9 @@ export default function AccountSettings() {
             <div className="setting-item">
               <div className="setting-text">
                 <div className="setting-title">Tema</div>
-                <div className="setting-desc">Bu ayar sadece bu sayfada uygulanır.</div>
+                <div className="setting-desc">
+                  Bu ayar sadece bu sayfada uygulanır.
+                </div>
               </div>
 
               <div className="seg" role="tablist" aria-label="Tema seçici">
@@ -300,14 +310,10 @@ export default function AccountSettings() {
           </div>
         </div>
 
-
         <section className="card danger">
           <h3>Hesabı Sil</h3>
           {!deleteMode && (
-            <button
-              className="danger-btn"
-              onClick={() => setDeleteMode(true)}
-            >
+            <button className="danger-btn" onClick={() => setDeleteMode(true)}>
               Hesabı Sil
             </button>
           )}

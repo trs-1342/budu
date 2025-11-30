@@ -3,13 +3,14 @@
    ========================= */
 
 .account-page {
-  font-family: "Inter", system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Fira Code", monospace;
+  font-family: "Inter", system-ui, -apple-system, Segoe UI, Roboto, Ubuntu,
+    Cantarell, "Fira Code", monospace;
   min-height: 100vh;
   padding: 56px 24px 32px;
   /* üsten boşluk artırıldı */
   background-color: var(--bg);
   color: var(--fg);
-  transition: background-color .25s ease, color .25s ease;
+  transition: background-color 0.25s ease, color 0.25s ease;
 
   /* LIGHT varsayılanları */
   --bg: #ffffff;
@@ -33,7 +34,7 @@
   /* switch kapalı */
   --toggle-on: #22c55e;
   /* switch açık */
-  --focus: rgba(17, 17, 17, .35);
+  --focus: rgba(17, 17, 17, 0.35);
 }
 
 .account-page.dark {
@@ -62,7 +63,7 @@
   /* kapalı gri */
   --toggle-on: #22c55e;
   /* açık yeşil */
-  --focus: rgba(255, 255, 255, .35);
+  --focus: rgba(255, 255, 255, 0.35);
 }
 
 /* Başlık */
@@ -101,7 +102,7 @@
   padding: 20px;
   display: grid;
   gap: 18px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, .08);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
 }
 
 /* Tepe başlıkları */
@@ -119,7 +120,7 @@ h3 {
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
 
-.grid>div {
+.grid > div {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -127,7 +128,7 @@ h3 {
 
 label {
   font-weight: 700;
-  opacity: .95;
+  opacity: 0.95;
   color: var(--panel-fg);
 }
 
@@ -145,12 +146,12 @@ select {
 }
 
 input::placeholder {
-  opacity: .55;
+  opacity: 0.55;
   color: var(--input-fg);
 }
 
 #disableinp[disabled] {
-  opacity: .75;
+  opacity: 0.75;
   cursor: not-allowed;
 }
 
@@ -162,29 +163,54 @@ button:focus-visible {
 }
 
 /* Şifre göz butonları input içinde */
+/* Şifre input + göz butonu tek “pill” gibi görünsün */
 .input-affix {
-  position: relative;
-}
-
-.input-affix>input {
-  padding-right: 48px;
-}
-
-.input-affix>button {
-  position: absolute;
-  right: 6px;
-  top: 6px;
-  height: 32px;
-  min-width: 36px;
-  padding: 0 8px;
-  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--input-bg);
+  overflow: hidden;
+}
+
+/* İçteki input, normal input style’ını override etsin */
+.input-affix > input {
+  border: none;
+  background: transparent;
   color: var(--input-fg);
+  flex: 1;
+  height: 44px;
+  padding: 0 12px;
+  font-size: 15px;
+}
+
+/* Göz butonu input’un devamı gibi dursun */
+.input-affix > button {
+  border: none;
+  border-left: 1px solid var(--border);
+  background: transparent;
+  color: var(--input-fg);
+  width: 44px;
+  height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  border-radius: 0; /* köşeler zaten parent’ta */
+}
+
+.input-affix > button:hover {
+  background: color-mix(in oklab, var(--panel-bg) 80%, var(--fg));
+}
+
+.input-affix > input:focus-visible,
+.input-affix > button:focus-visible {
+  outline: none;
+}
+
+/* Fokus, kapsayıcıya uygulansın */
+.input-affix:focus-within {
+  box-shadow: 0 0 0 3px var(--focus);
 }
 
 /* Kart sonu buton alanı — SAĞA YASLA */
@@ -240,21 +266,21 @@ button.secondary {
 }
 
 .setting-desc {
-  opacity: .9;
-  font-size: .95rem;
+  opacity: 0.9;
+  font-size: 0.95rem;
 }
 
 /* iOS tarzı toggle */
-.toggle {
+/* Daha kompakt iOS tarzı toggle */
+/* .toggle {
   position: relative;
-  inline-size: 56px;
-  block-size: 32px;
-  border: 0;
+  width: 46px;
+  height: 24px;
   padding: 0;
+  border: 0;
   background: transparent;
   border-radius: 999px;
   cursor: pointer;
-  outline: none;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -263,20 +289,21 @@ button.secondary {
   inset: 0;
   border-radius: 999px;
   background: var(--toggle-off);
-  transition: background-color .18s ease;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+  transition: background-color 0.18s ease;
 }
 
 .toggle .thumb {
   position: absolute;
-  inset-block-start: 3px;
-  inset-inline-start: 3px;
-  inline-size: 26px;
-  block-size: 26px;
-  border-radius: 50%;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
   background: #fff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, .25);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
   transform: translateX(0);
-  transition: transform .18s ease;
+  transition: transform 0.18s ease;
 }
 
 .toggle.on .track {
@@ -284,12 +311,68 @@ button.secondary {
 }
 
 .toggle.on .thumb {
-  transform: translateX(24px);
+  transform: translateX(20px);
 }
 
 .toggle:focus-visible {
+  outline: none;
   box-shadow: 0 0 0 3px color-mix(in oklab, var(--toggle-on) 40%, transparent);
-  border-radius: 999px;
+} */
+
+/* === YENİ TASARIM: CHECKBOX STILI TOGGLE === */
+
+.toggle {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 2px solid var(--border);
+  background: var(--input-bg);
+  border-radius: 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Track kullanmıyoruz artık */
+.toggle .track {
+  display: none;
+}
+
+/* Thumb şimdi checkmark olacak */
+.toggle .thumb {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  width: 12px;
+  height: 12px;
+  background-color: #fff;
+  border-radius: 3px;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Açık durum - checkbox doldu */
+.toggle.on {
+  background-color: var(--toggle-on);
+  border-color: var(--toggle-on);
+}
+
+.toggle.on .thumb {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+/* Hover */
+.toggle:hover {
+  border-color: var(--toggle-on);
+  transform: scale(1.05);
+}
+
+/* Focus */
+.toggle:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus);
 }
 
 /* Tema seçici */
