@@ -4,7 +4,7 @@ import "../css/login-scoped.css"; // Sadece login (scoped)
 import { BiHide, BiSolidShow } from "react-icons/bi";
 
 export default function AdminLogin() {
-  const API = import.meta.env.VITE_API_BASE || "http://localhost:1002";
+  const API = import.meta.env.VITE_API_BASE || "http://72.62.52.200:1002";
   const [show, setShow] = useState(false);
   const [remember, setRemember] = useState(true);
   const [loading, setLoading] = useState(false);

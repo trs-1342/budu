@@ -4,7 +4,7 @@ import "../css/admin-scoped.css"; // GENEL admin tema (scoped)
 import "../css/layout-scoped.css"; // Layout + sidebar (scoped)
 import { useEffect, useState } from "react";
 
-const API = import.meta.env.VITE_API_BASE || "http://localhost:1002";
+const API = import.meta.env.VITE_API_BASE || "http://72.62.52.200:1002";
 type Me = { id: number; username: string; email: string; create_at: string };
 
 export default function AdminLayout() {
