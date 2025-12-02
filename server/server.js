@@ -13,16 +13,17 @@ const multer = require("multer");
 const { customAlphabet } = require("nanoid");
 const mime = require("mime-types");
 const REQ = ["DB_HOST", "DB_PORT", "DB_USER", "DB_PASS", "DB_NAME"];
+const userAuthRequired = require("./middleware/userAuth.js");
 for (const k of REQ) {
   if (!process.env[k] || String(process.env[k]).trim() === "") {
     throw new Error(`Missing required env: ${k}`);
   }
 }
 
-
 const PLAYBACK_SECRET = process.env.PLAYBACK_SECRET || "dev-playback-secret";
 const PLAYBACK_TTL = Number(process.env.PLAYBACK_TTL || 90); // saniye
-const VIDEO_ROOT = process.env.VIDEO_ROOT || path.join(__dirname, "uploads", "courses");
+const VIDEO_ROOT =
+  process.env.VIDEO_ROOT || path.join(__dirname, "uploads", "courses");
 
 // (Opsiyonel) tek kullanımlık jti takibi (memory). Prod: DB kullan.
 const usedJtis = new Set();
@@ -63,7 +64,6 @@ const verifyRefresh = (t) => jwt.verify(t, JWT_REFRESH_SECRET);
 
 const COURSES_DIR = path.join(__dirname, "courses", "video");
 const JWT_SECRET = process.env.JWT_SECRET || "dev_secret";
-
 
 // ! BLOB
 
@@ -109,7 +109,9 @@ function makePlaybackToken({ userId, courseId }) {
   const jti = Math.random().toString(36).slice(2);
   const payload = { sub: String(userId), cid: String(courseId), jti };
   return {
-    token: jwt.sign(payload, PLAYBACK_SECRET, { expiresIn: `${PLAYBACK_TTL}s` }),
+    token: jwt.sign(payload, PLAYBACK_SECRET, {
+      expiresIn: `${PLAYBACK_TTL}s`,
+    }),
     jti,
     expiresIn: PLAYBACK_TTL,
   };
@@ -166,8 +168,76 @@ async function checkUserCanViewCourse(userId, courseId) {
   return false;
 }
 
-
 // BLOB
+
+// ==========================
+function createSignedVideoToken(userId, courseId, expiresInSeconds = 900) {
+  const payload = {
+    uid: userId,
+    cid: courseId,
+    exp: Math.floor(Date.now() / 1000) + expiresInSeconds,
+  };
+
+  const data = JSON.stringify(payload);
+  const signature = crypto
+    .createHmac("sha256", process.env.VIDEO_SECRET)
+    .update(data)
+    .digest("hex");
+
+  const token = Buffer.from(data).toString("base64") + "." + signature;
+  return token;
+}
+
+function verifySignedVideoToken(token) {
+  try {
+    const [dataB64, signature] = token.split(".");
+    if (!dataB64 || !signature) return null;
+
+    const data = Buffer.from(dataB64, "base64").toString("utf8");
+
+    const expectedSig = crypto
+      .createHmac("sha256", process.env.VIDEO_SECRET)
+      .update(data)
+      .digest("hex");
+
+    if (signature !== expectedSig) return null;
+
+    const payload = JSON.parse(data);
+    if (payload.exp < Math.floor(Date.now() / 1000)) return null;
+
+    return payload; // { uid, cid, exp }
+  } catch (e) {
+    return null;
+  }
+}
+
+function authRequired(req, res, next) {
+  const auth = req.headers.authorization || "";
+  const [type, token] = auth.split(" ");
+
+  if (type !== "Bearer" || !token) {
+    return res.status(401).json({ error: "Token yok" });
+  }
+
+  try {
+    // Access token'ları zaten JWT_ACCESS_SECRET ile imzalı
+    const p = verifyAccess(token); // ← direkt helper'ı kullan
+
+    // normalize: req.user.id her zaman olsun
+    req.user = {
+      id: p.sub,
+      username: p.username || null,
+      email: p.email || null,
+      role: p.role || p.aud || null,
+    };
+
+    return next();
+  } catch (err) {
+    console.error("authRequired error:", err);
+    return res.status(401).json({ error: "Geçersiz token" });
+  }
+}
+// ==========================
 
 // === only customers ===
 function requireUserAuth(req, res, next) {
@@ -187,8 +257,11 @@ function requireUserAuth(req, res, next) {
       if (r?.aud && r.aud !== "user") throw new Error("aud mismatch");
       const fresh = signAccess({ sub: r.sub, aud: "user" });
       res.cookie("u_access", fresh, {
-        httpOnly: true, sameSite: "lax", secure: false,
-        maxAge: ms(process.env.ACCESS_TTL || ACCESS_TTL), path: "/",
+        httpOnly: true,
+        sameSite: "lax",
+        secure: false,
+        maxAge: ms(process.env.ACCESS_TTL || ACCESS_TTL),
+        path: "/",
       });
       token = fresh;
     } catch {
@@ -200,7 +273,8 @@ function requireUserAuth(req, res, next) {
 
   try {
     const p = verifyAccess(token);
-    if (p?.aud && p.aud !== "user") return res.status(401).json({ error: "Unauthorized" });
+    if (p?.aud && p.aud !== "user")
+      return res.status(401).json({ error: "Unauthorized" });
     req.user = { id: p.sub, email: p.email || null, role: p.role || "user" };
     next();
   } catch {
@@ -226,11 +300,13 @@ function requireAuth(req, res, next) {
   // access yoksa refresh ile yeni access üret
   if (!token && req.cookies?.refresh) {
     try {
-      const r = verifyRefresh(req.cookies.refresh);      // JWT_REFRESH_SECRET
-      const fresh = signAccess({ sub: r.sub });          // JWT_ACCESS_SECRET
+      const r = verifyRefresh(req.cookies.refresh); // JWT_REFRESH_SECRET
+      const fresh = signAccess({ sub: r.sub }); // JWT_ACCESS_SECRET
       res.cookie("access", fresh, {
-        httpOnly: true, sameSite: "lax", secure: false,
-        maxAge: ms(process.env.ACCESS_TTL || ACCESS_TTL)
+        httpOnly: true,
+        sameSite: "lax",
+        secure: false,
+        maxAge: ms(process.env.ACCESS_TTL || ACCESS_TTL),
       });
       token = fresh;
     } catch {
@@ -252,7 +328,6 @@ function requireAuth(req, res, next) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 }
-
 
 // Token üretimi (requireAuth ile aynı secret'ı kullanıyoruz)
 function signUserToken(payload) {
@@ -568,7 +643,8 @@ app.post("/api/auth/login", async (req, res) => {
 // === CUSTOMERS LOGIN (user) ===
 app.post("/api/auth/user-login", async (req, res) => {
   try {
-    const idf = req.body?.emailOrUsername || req.body?.email || req.body?.username;
+    const idf =
+      req.body?.emailOrUsername || req.body?.email || req.body?.username;
     const { password } = req.body || {};
     if (!idf || !password) return res.status(400).json({ error: "Eksik alan" });
 
@@ -590,20 +666,34 @@ app.post("/api/auth/user-login", async (req, res) => {
     // plain ise sessiz migrasyon
     if (!isBcrypt(u.password)) {
       const hash = await bcrypt.hash(u.password, 10);
-      await pool.query("UPDATE customers SET password=? WHERE id=?", [hash, u.id]);
+      await pool.query("UPDATE customers SET password=? WHERE id=?", [
+        hash,
+        u.id,
+      ]);
     }
 
     // >>> user'a özel access/refresh + aud: 'user'
-    const access = signAccess({ sub: u.id, email: u.email, role: "user", aud: "user" });
+    const access = signAccess({
+      sub: u.id,
+      email: u.email,
+      role: "user",
+      aud: "user",
+    });
     const refresh = signRefresh({ sub: u.id, aud: "user" });
 
     res.cookie("u_access", access, {
-      httpOnly: true, sameSite: "lax", secure: false,
-      maxAge: ms(ACCESS_TTL), path: "/",
+      httpOnly: true,
+      sameSite: "lax",
+      secure: false,
+      maxAge: ms(ACCESS_TTL),
+      path: "/",
     });
     res.cookie("u_refresh", refresh, {
-      httpOnly: true, sameSite: "lax", secure: false,
-      maxAge: ms(REFRESH_TTL), path: "/",
+      httpOnly: true,
+      sameSite: "lax",
+      secure: false,
+      maxAge: ms(REFRESH_TTL),
+      path: "/",
     });
 
     // Frontend uyumluluğu için JSON’a da koyuyorum
@@ -626,7 +716,8 @@ app.post("/api/auth/user-login", async (req, res) => {
 });
 
 app.post("/api/auth/user-register", async (req, res) => {
-  const { fname, sname, username, email, password, phone, country_dial } = req.body;
+  const { fname, sname, username, email, password, phone, country_dial } =
+    req.body;
   if (!fname || !sname || !username || !email || !password)
     return res.status(400).json({ error: "Eksik bilgi" });
 
@@ -634,12 +725,22 @@ app.post("/api/auth/user-register", async (req, res) => {
     "SELECT id FROM customers WHERE username=? OR email=? LIMIT 1",
     [username, email]
   );
-  if (exists.length) return res.status(409).json({ error: "Kullanıcı zaten var" });
+  if (exists.length)
+    return res.status(409).json({ error: "Kullanıcı zaten var" });
 
   const hash = await bcrypt.hash(password, 10);
   await pool.query(
     "INSERT INTO customers (fname, sname, full_name, username, email, password, phone, country_dial) VALUES (?,?,?,?,?,?,?,?)",
-    [fname, sname, `${fname} ${sname}`, username, email, hash, phone || null, country_dial || null]
+    [
+      fname,
+      sname,
+      `${fname} ${sname}`,
+      username,
+      email,
+      hash,
+      phone || null,
+      country_dial || null,
+    ]
   );
   res.json({ ok: true });
 });
@@ -697,112 +798,136 @@ app.post("/api/auth/register", async (req, res) => {
   }
 });
 
-app.get("/api/account/user-me", requireUserAuth /* veya requireAuth */, async (req, res) => {
-  try {
-    const uid = getAuthUserId(req);
-    if (!uid) return res.status(401).json({ error: "Kimlik gerekli" });
+app.get(
+  "/api/account/user-me",
+  requireUserAuth /* veya requireAuth */,
+  async (req, res) => {
+    try {
+      const uid = getAuthUserId(req);
+      if (!uid) return res.status(401).json({ error: "Kimlik gerekli" });
 
-    const [rows] = await pool.execute(
-      `SELECT id, email, username, phone, country_dial, membership_notify, theme
+      const [rows] = await pool.execute(
+        `SELECT id, email, username, phone, country_dial, membership_notify, theme
          FROM customers WHERE id = ? LIMIT 1`,
-      [uid]
-    );
-    if (!rows.length) return res.status(404).json({ error: "Kullanıcı bulunamadı" });
+        [uid]
+      );
+      if (!rows.length)
+        return res.status(404).json({ error: "Kullanıcı bulunamadı" });
 
-    const u = rows[0];
-    res.json({
-      id: u.id,
-      email: u.email,
-      username: u.username,
-      phone: u.phone,
-      countryDial: u.country_dial,
-      membershipNotify: !!u.membership_notify,
-      theme: Number(u.theme) === 1 ? "light" : "dark",
-    });
-  } catch (e) {
-    console.error("user-me error:", e);
-    res.status(500).json({ error: "Sunucu hatası" });
+      const u = rows[0];
+      res.json({
+        id: u.id,
+        email: u.email,
+        username: u.username,
+        phone: u.phone,
+        countryDial: u.country_dial,
+        membershipNotify: !!u.membership_notify,
+        theme: Number(u.theme) === 1 ? "light" : "dark",
+      });
+    } catch (e) {
+      console.error("user-me error:", e);
+      res.status(500).json({ error: "Sunucu hatası" });
+    }
   }
-});
+);
 
-app.patch("/api/account/user-update", requireUserAuth /* veya requireAuth */, async (req, res) => {
-  try {
-    const uid = getAuthUserId(req);
-    if (!uid) return res.status(401).json({ error: "Kimlik gerekli" });
+app.patch(
+  "/api/account/user-update",
+  requireUserAuth /* veya requireAuth */,
+  async (req, res) => {
+    try {
+      const uid = getAuthUserId(req);
+      if (!uid) return res.status(401).json({ error: "Kimlik gerekli" });
 
-    const phone = typeof req.body?.phone === "string" ? req.body.phone.trim() : undefined;
-    const membershipNotify = typeof req.body?.membershipNotify === "boolean" ? req.body.membershipNotify : undefined;
-    // theme: 'light' | 'dark' | 1 | 0 kabul
-    let theme = req.body?.theme;
-    if (typeof theme !== "undefined") {
-      if (theme === "light" || theme === 1 || theme === "1") theme = 1;
-      else if (theme === "dark" || theme === 0 || theme === "0") theme = 0;
-      else return res.status(400).json({ error: "Geçersiz tema" });
+      const phone =
+        typeof req.body?.phone === "string" ? req.body.phone.trim() : undefined;
+      const membershipNotify =
+        typeof req.body?.membershipNotify === "boolean"
+          ? req.body.membershipNotify
+          : undefined;
+      // theme: 'light' | 'dark' | 1 | 0 kabul
+      let theme = req.body?.theme;
+      if (typeof theme !== "undefined") {
+        if (theme === "light" || theme === 1 || theme === "1") theme = 1;
+        else if (theme === "dark" || theme === 0 || theme === "0") theme = 0;
+        else return res.status(400).json({ error: "Geçersiz tema" });
+      }
+
+      const fields = [];
+      const values = [];
+
+      if (typeof phone !== "undefined") {
+        fields.push("phone = ?");
+        values.push(phone || null);
+      }
+      if (typeof membershipNotify !== "undefined") {
+        fields.push("membership_notify = ?");
+        values.push(membershipNotify ? 1 : 0);
+      }
+      if (typeof theme !== "undefined") {
+        fields.push("theme = ?");
+        values.push(theme);
+      }
+
+      if (!fields.length)
+        return res.status(400).json({ error: "Güncellenecek alan yok" });
+
+      values.push(uid);
+      const sql = `UPDATE customers SET ${fields.join(", ")} WHERE id=?`;
+      await pool.query(sql, values);
+
+      res.json({ ok: true });
+    } catch (e) {
+      console.error("user-update error:", e);
+      res.status(500).json({ error: "Sunucu hatası" });
     }
-
-    const fields = [];
-    const values = [];
-
-    if (typeof phone !== "undefined") {
-      fields.push("phone = ?");
-      values.push(phone || null);
-    }
-    if (typeof membershipNotify !== "undefined") {
-      fields.push("membership_notify = ?");
-      values.push(membershipNotify ? 1 : 0);
-    }
-    if (typeof theme !== "undefined") {
-      fields.push("theme = ?");
-      values.push(theme);
-    }
-
-    if (!fields.length) return res.status(400).json({ error: "Güncellenecek alan yok" });
-
-    values.push(uid);
-    const sql = `UPDATE customers SET ${fields.join(", ")} WHERE id=?`;
-    await pool.query(sql, values);
-
-    res.json({ ok: true });
-  } catch (e) {
-    console.error("user-update error:", e);
-    res.status(500).json({ error: "Sunucu hatası" });
   }
-});
-
+);
 
 // Hesap: Şifre değiştir
-app.post("/api/account/user-change-password", requireUserAuth, async (req, res) => {
-  try {
-    const uid = getAuthUserId(req);
-    if (!uid) return res.status(401).json({ error: "Kimlik gerekli" });
+app.post(
+  "/api/account/user-change-password",
+  requireUserAuth,
+  async (req, res) => {
+    try {
+      const uid = getAuthUserId(req);
+      if (!uid) return res.status(401).json({ error: "Kimlik gerekli" });
 
-    const { current_password, new_password } = req.body || {};
-    if (!current_password || !new_password || String(new_password).length < 6) {
-      return res.status(400).json({ error: "Geçersiz şifre" });
+      const { current_password, new_password } = req.body || {};
+      if (
+        !current_password ||
+        !new_password ||
+        String(new_password).length < 6
+      ) {
+        return res.status(400).json({ error: "Geçersiz şifre" });
+      }
+
+      const [rows] = await pool.query(
+        "SELECT password FROM customers WHERE id=? LIMIT 1",
+        [uid]
+      );
+      if (!rows.length)
+        return res.status(404).json({ error: "Kullanıcı bulunamadı" });
+
+      const ok = isBcrypt(rows[0].password)
+        ? bcrypt.compareSync(current_password, rows[0].password)
+        : current_password === rows[0].password;
+
+      if (!ok) return res.status(401).json({ error: "Mevcut şifre yanlış" });
+
+      const hash = bcrypt.hashSync(String(new_password), 10);
+      await pool.query("UPDATE customers SET password=? WHERE id=?", [
+        hash,
+        uid,
+      ]);
+
+      res.json({ ok: true });
+    } catch (e) {
+      console.error("user-change-password error:", e);
+      res.status(500).json({ error: "Sunucu hatası" });
     }
-
-    const [rows] = await pool.query(
-      "SELECT password FROM customers WHERE id=? LIMIT 1",
-      [uid]
-    );
-    if (!rows.length)
-      return res.status(404).json({ error: "Kullanıcı bulunamadı" });
-
-    const ok = isBcrypt(rows[0].password)
-      ? bcrypt.compareSync(current_password, rows[0].password)
-      : current_password === rows[0].password;
-
-    if (!ok) return res.status(401).json({ error: "Mevcut şifre yanlış" });
-
-    const hash = bcrypt.hashSync(String(new_password), 10);
-    await pool.query("UPDATE customers SET password=? WHERE id=?", [hash, uid]);
-
-    res.json({ ok: true });
-  } catch (e) {
-    console.error("user-change-password error:", e);
-    res.status(500).json({ error: "Sunucu hatası" });
   }
-});
+);
 
 app.post(
   "/api/account/user-notify-membership",
@@ -836,7 +961,10 @@ app.delete("/api/account/user-delete", requireUserAuth, async (req, res) => {
     const { password } = req.body || {};
     if (!password) return res.status(400).json({ error: "Şifre gerekli" });
 
-    const [[row]] = await pool.query("SELECT password FROM customers WHERE id=?", [uid]);
+    const [[row]] = await pool.query(
+      "SELECT password FROM customers WHERE id=?",
+      [uid]
+    );
     if (!row) return res.status(404).json({ error: "Kullanıcı bulunamadı" });
 
     const ok = isBcrypt(row.password)
@@ -855,17 +983,19 @@ app.delete("/api/account/user-delete", requireUserAuth, async (req, res) => {
   }
 });
 
-
 app.post("/api/auth/refresh", async (req, res) => {
   try {
     const r = req.cookies?.refresh;
     if (!r) return res.status(401).json({ error: "Unauthorized" });
 
-    const p = verifyRefresh(r);              // REFRESH secret
-    const access = signAccess({ sub: p.sub });// ACCESS secret
+    const p = verifyRefresh(r); // REFRESH secret
+    const access = signAccess({ sub: p.sub }); // ACCESS secret
 
     res.cookie("access", access, {
-      httpOnly: true, sameSite: "lax", secure: false, maxAge: ms(ACCESS_TTL),
+      httpOnly: true,
+      sameSite: "lax",
+      secure: false,
+      maxAge: ms(ACCESS_TTL),
     });
 
     return res.json({ access });
@@ -873,7 +1003,6 @@ app.post("/api/auth/refresh", async (req, res) => {
     return res.status(401).json({ error: "Unauthorized" });
   }
 });
-
 
 // === CUSTOMERS REFRESH (user) ===
 // /api/auth/user-refresh
@@ -884,14 +1013,16 @@ app.post("/api/auth/user-refresh", (req, res) => {
     const p = verifyRefresh(r);
     const access = signAccess({ sub: p.sub, role: "user" }); // aud: 'user' da ekleyebilirsin
     res.cookie("u_access", access, {
-      httpOnly: true, sameSite: "lax", secure: false, maxAge: ms(ACCESS_TTL),
+      httpOnly: true,
+      sameSite: "lax",
+      secure: false,
+      maxAge: ms(ACCESS_TTL),
     });
     res.json({ access });
   } catch {
     res.status(401).json({ error: "Unauthorized" });
   }
 });
-
 
 app.post("/api/auth/logout", async (_req, res) => {
   res.clearCookie("refresh");
@@ -1240,7 +1371,7 @@ app.post(
     const detail = String(req.body?.detail || "").trim() || null;
 
     if (!title) {
-      if (req.file) fs.unlink(req.file.path, () => { });
+      if (req.file) fs.unlink(req.file.path, () => {});
       return res.status(400).json({ error: "Başlık zorunlu" });
     }
     if (!req.file)
@@ -1270,7 +1401,7 @@ app.post(
       );
       return res.status(201).json({ item: rows[0] });
     } catch (e) {
-      fs.unlink(req.file.path, () => { });
+      fs.unlink(req.file.path, () => {});
       throw e;
     }
   })
@@ -1301,19 +1432,19 @@ app.delete(
 
       if (item?.video_url && item.video_url.startsWith("/courses/")) {
         const abs = safeJoin(COURSES_ROOT, item.video_url);
-        fs.unlink(abs, () => { });
+        fs.unlink(abs, () => {});
       }
 
       return res.json({ ok: true });
     } catch (e) {
       try {
         await conn.rollback();
-      } catch { }
+      } catch {}
       throw e;
     } finally {
       try {
         conn.release();
-      } catch { }
+      } catch {}
     }
   })
 );
@@ -1500,10 +1631,127 @@ app.get("/api/courses/:id", requireUserAuth, async (req, res) => {
 //   }
 // });
 
+// örn: GET /api/courses/video-link/3
+app.get("/api/courses/video-link/:id", userAuthRequired, async (req, res) => {
+  try {
+    const courseId = parseInt(req.params.id, 10);
+    const userId = req.user.id;
+
+    // 1) Kullanıcının bu derse erişim hakkı var mı?
+    // Şimdilik basit: giriş yapan herkes izleyebilsin diyorsan burayı pass geçebilirsin.
+    const hasAccess = true; // ileride: await checkUserCourseAccess(userId, courseId);
+    if (!hasAccess) {
+      return res.status(403).json({ error: "Bu derse erişim iznin yok." });
+    }
+
+    // 2) DB'den video dosya adını çek
+    const [rows] = await db.query(
+      "SELECT video_url FROM courses WHERE id = ?",
+      [courseId]
+    );
+    if (!rows.length) {
+      return res.status(404).json({ error: "Ders bulunamadı." });
+    }
+
+    const fileName = rows[0].video_url; // örn: '1736631123_intro.mp4'
+
+    // 3) Kısa ömürlü imzalı token oluştur
+    const signedToken = createSignedVideoToken(userId, courseId, 15 * 60); // 15 dk
+
+    // 4) Frontend'e döneceğimiz URL:
+    const videoPath = `/api/courses/video-stream/${courseId}?vt=${encodeURIComponent(
+      signedToken
+    )}`;
+
+    // İstersen log da at:
+    // await db.query('INSERT INTO course_views ...', [...])
+
+    res.json({
+      videoPath,
+      // debugging: signedToken,
+    });
+  } catch (err) {
+    console.error("video-link error", err);
+    res.status(500).json({ error: "Video linki üretilemedi." });
+  }
+});
+
+// GET /api/courses/video-stream/:id?vt=...
+app.get("/api/courses/video-stream/:id", async (req, res) => {
+  try {
+    const courseId = parseInt(req.params.id, 10);
+    const { vt } = req.query;
+    if (!vt) return res.status(403).json({ error: "Token eksik" });
+
+    const payload = verifySignedVideoToken(String(vt));
+    if (!payload) {
+      return res
+        .status(403)
+        .json({ error: "Geçersiz veya süresi dolmuş link" });
+    }
+
+    // Token içindeki courseId ile URL'deki id uyuşuyor mu?
+    if (String(payload.cid) !== String(courseId)) {
+      return res.status(403).json({ error: "Kimlik uyuşmazlığı" });
+    }
+
+    // DB'den video dosya adını bir daha çek (güvenli olsun)
+    const [rows] = await db.query(
+      "SELECT video_url FROM courses WHERE id = ?",
+      [courseId]
+    );
+    if (!rows.length) {
+      return res.status(404).json({ error: "Ders bulunamadı." });
+    }
+
+    const fileName = rows[0].video_url;
+    const videoPath = path.join(__dirname, "storage", "videos", fileName);
+
+    if (!fs.existsSync(videoPath)) {
+      return res.status(404).json({ error: "Video dosyası yok." });
+    }
+
+    const stat = fs.statSync(videoPath);
+    const fileSize = stat.size;
+    const range = req.headers.range;
+
+    if (range) {
+      const parts = range.replace(/bytes=/, "").split("-");
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      const chunkSize = end - start + 1;
+
+      const file = fs.createReadStream(videoPath, { start, end });
+
+      const head = {
+        "Content-Range": `bytes ${start}-${end}/${fileSize}`,
+        "Accept-Ranges": "bytes",
+        "Content-Length": chunkSize,
+        "Content-Type": "video/mp4",
+      };
+
+      res.writeHead(206, head);
+      file.pipe(res);
+    } else {
+      const head = {
+        "Content-Length": fileSize,
+        "Content-Type": "video/mp4",
+      };
+      res.writeHead(200, head);
+      fs.createReadStream(videoPath).pipe(res);
+    }
+  } catch (err) {
+    console.error("video-stream error", err);
+    res.status(500).json({ error: "Video oynatılamadı." });
+  }
+});
+
 app.get("/api/courses/:id/play", requireAuth, async (req, res) => {
   const courseId = Number(req.params.id);
   // 1) DB'den course al
-  const row = await pool.query("SELECT id, video_url FROM courses WHERE id=?", [courseId]);
+  const row = await pool.query("SELECT id, video_url FROM courses WHERE id=?", [
+    courseId,
+  ]);
   const course = row?.[0];
   if (!course) return res.status(404).json({ error: "not_found" });
 
@@ -1520,7 +1768,8 @@ app.get("/api/courses/:id/play", requireAuth, async (req, res) => {
   }
 
   const filePath = resolveCourseFile(rel);
-  if (!fs.existsSync(filePath)) return res.status(404).json({ error: "file_missing" });
+  if (!fs.existsSync(filePath))
+    return res.status(404).json({ error: "file_missing" });
 
   // 4) token üret + kaydet
   const token = genToken();
@@ -1584,7 +1833,6 @@ app.get("/courses/playback/:token", async (req, res) => {
       });
       const stream = fs.createReadStream(fpath, { start, end });
       stream.pipe(res);
-
     } else {
       // Full file
       res.writeHead(200, {
@@ -1600,7 +1848,6 @@ app.get("/courses/playback/:token", async (req, res) => {
 
     // (Tercih) token'ı tek kullanımlık yapmak istersen burada silebilirsin
     // playbackTokens.delete(token);
-
   } catch (err) {
     console.error(err);
     res.status(500).send("Server error");
@@ -1612,7 +1859,8 @@ app.get("/api/courses/:id/stream", async (req, res) => {
     const token = req.query.token || req.headers["x-playback-token"];
     const data = token ? verifyPlaybackToken(token) : null;
     if (!data) return res.status(401).end();
-    if (String(data.cid) !== String(req.params.id)) return res.status(403).end();
+    if (String(data.cid) !== String(req.params.id))
+      return res.status(403).end();
     if (data.jti && !usedJtis.has(data.jti)) return res.status(401).end(); // tek kullanımlık
 
     const filePath = await getInternalVideoPath(req.params.id);
@@ -1656,7 +1904,10 @@ app.get("/api/courses/:id/stream", async (req, res) => {
 
 app.get("/api/courses/:id/hls", requireAuth, async (req, res) => {
   const courseId = Number(req.params.id);
-  const [row] = await pool.query("SELECT id, hls_path FROM courses WHERE id=?", [courseId]);
+  const [row] = await pool.query(
+    "SELECT id, hls_path FROM courses WHERE id=?",
+    [courseId]
+  );
   if (!row) return res.status(404).json({ error: "not_found" });
 
   const token = genToken();
@@ -1682,13 +1933,16 @@ app.get("/courses/hls/:token/:file", async (req, res) => {
 
   // Sadece .m3u8 veya .ts izin ver
   const file = req.params.file;
-  if (!/^[\w\-.]+$/.test(file) || !/\.(m3u8|ts)$/i.test(file)) return res.status(400).end();
+  if (!/^[\w\-.]+$/.test(file) || !/\.(m3u8|ts)$/i.test(file))
+    return res.status(400).end();
 
   const abs = path.join(t.hlsRoot, file); // t.hlsRoot = /server/courses/hls/<videoId>
   if (!fs.existsSync(abs)) return res.status(404).end();
 
   // content-type
-  const type = file.endsWith(".m3u8") ? "application/vnd.apple.mpegurl" : "video/mp2t";
+  const type = file.endsWith(".m3u8")
+    ? "application/vnd.apple.mpegurl"
+    : "video/mp2t";
   res.setHeader("Content-Type", type);
   res.setHeader("Cache-Control", "no-store");
 

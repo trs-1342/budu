@@ -33,7 +33,6 @@
 //   return access as string;
 // }
 
-
 // /** refresh endpoint'i: yeni access dönerse sakla */
 // export async function refreshAccess(): Promise<string | null> {
 //   const r = await fetch(`${API}/api/auth/refresh`, {
@@ -166,8 +165,9 @@ export function saveAccess(token: string, remember = true) {
   store.setItem("token", token); // backward compatibility
 }
 
+/** Eski kodları kırmamak için alias: getToken = getAccess */
 export function getToken(): string | null {
-  return localStorage.getItem("token");
+  return getAccess();
 }
 
 /** sadece user refresh */
@@ -199,7 +199,10 @@ export async function refreshAccess(): Promise<string | null> {
 }
 
 /** 401'de bir kez refresh deneyip tekrar istek atan wrapper */
-export async function apiFetch(input: RequestInfo | URL, init: RequestInit = {}) {
+export async function apiFetch(
+  input: RequestInfo | URL,
+  init: RequestInit = {}
+) {
   const headers = new Headers(init.headers || {});
   const t = getAccess();
   if (t) headers.set("Authorization", `Bearer ${t}`);
@@ -234,13 +237,15 @@ export async function api<T = any>(
   path: string,
   opts: { method?: "GET" | "POST" | "PATCH" | "DELETE"; body?: any } = {}
 ): Promise<T> {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
   const body =
     opts.body === undefined || opts.body === null
       ? undefined
       : typeof opts.body === "string"
-        ? opts.body
-        : JSON.stringify(opts.body);
+      ? opts.body
+      : JSON.stringify(opts.body);
 
   const res = await apiFetch(`${API}${path}`, {
     method: opts.method || "GET",
@@ -249,7 +254,11 @@ export async function api<T = any>(
   });
 
   let data: any = {};
-  try { data = await res.json(); } catch { data = {}; }
+  try {
+    data = await res.json();
+  } catch {
+    data = {};
+  }
 
   if (!res.ok) throw new Error(data?.error || data?.message || res.statusText);
   if (data?.access && !data?.token) data.token = data.access; // uyumluluk
