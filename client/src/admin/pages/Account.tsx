@@ -1,3 +1,4 @@
+// src/admin/pages/Account.tsx
 import { useEffect, useState } from "react";
 import { apiFetch, API_BASE } from "../lib/auth";
 import "../css/Account.css";
@@ -16,18 +17,29 @@ export default function Account() {
 
   useEffect(() => {
     let alive = true;
+
     (async () => {
       try {
         const r = await apiFetch(`${API_BASE}/api/auth/me`);
         if (!r.ok) throw new Error("Yetkisiz veya oturum süresi doldu.");
-        const data = await r.json();
-        if (alive) setMe(data.user as Me);
+
+        const data = await r.json().catch(() => ({} as any));
+
+        // /api/auth/me yanıtını esnek karşıla
+        const user = (data && (data.user || data.me || data.data)) || data;
+
+        if (!user || !user.id) {
+          throw new Error("Kullanıcı bilgileri alınamadı.");
+        }
+
+        if (alive) setMe(user as Me);
       } catch (e: any) {
         if (alive) setErr(e.message || "Bilgiler alınamadı.");
       } finally {
         if (alive) setLoading(false);
       }
     })();
+
     return () => {
       alive = false;
     };
@@ -40,6 +52,7 @@ export default function Account() {
       </div>
     );
   }
+
   if (err) {
     return (
       <div className="acc-wrap">
@@ -52,9 +65,24 @@ export default function Account() {
       </div>
     );
   }
-  if (!me) return null;
 
-  // basit tarih formatı
+  if (!me) {
+    // Teorik olarak buraya düşmemeliyiz ama yine de fallback bırakıyoruz
+    return (
+      <div className="acc-wrap">
+        <div className="acc-card">
+          <div className="acc-row">
+            <div className="acc-key">Durum</div>
+            <div className="acc-val">
+              Kullanıcı bilgileri bulunamadı. Lütfen oturumu kapatıp tekrar
+              giriş yapın.
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const joined = new Date(me.create_at).toLocaleString();
 
   return (

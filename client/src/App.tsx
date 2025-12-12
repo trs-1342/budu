@@ -5,6 +5,7 @@ import {
   Navigate,
   Outlet,
 } from "react-router-dom";
+
 // USER PAGES
 import Home from "./pages/Home";
 import Handbook from "./pages/Handbook";
@@ -14,10 +15,9 @@ import Courses from "./pages/Courses";
 import CoursesWatch from "./pages/CoursesWatch";
 import MyProducts from "./pages/MyProducts";
 import PostDetail from "./pages/PostDetail";
-// import Auth from "./pages/Auth";
-import Register from "./pages/auth/Register.tsx";
-import Login from "./pages/auth/Login.tsx";
-import AccountSettings from "./pages/AccountSettings";
+// import Register from "./pages/auth/Register.tsx";
+// import Login from "./pages/auth/Login.tsx";
+// import AccountSettings from "./pages/AccountSettings";
 
 // ADMIN PAGES
 import AdminLogin from "./admin/pages/AdminLogin";
@@ -32,11 +32,16 @@ import Gallery from "./admin/pages/Gallery.tsx";
 import SettingCourses from "./admin/pages/SettingCourses.tsx";
 import AdminNotFound from "./admin/pages/AdminNotFound";
 
-// scroorl animation
+// scroll animation
 import useRevealOnScroll from "./hooks/useRevealOnScroll";
 
+// ortak auth helper
+import { getAccess, isJwtValid } from "./lib/api";
+
+// token okuma + JWT geçerlilik kontrolü
 function getAccessToken(): string | null {
-  return localStorage.getItem("access") || sessionStorage.getItem("access");
+  const token = getAccess();
+  return token && isJwtValid(token) ? token : null;
 }
 
 // korumalı rota
@@ -60,27 +65,45 @@ function App() {
             <Route path="/courses" element={<Courses />} />
             <Route path="/courses/watch/:id" element={<CoursesWatch />} />
             <Route path="/my-products" element={<MyProducts />} />
-            <Route path="/register" element={<Register />}/>
-            <Route path="/login" element={<Login />}/>
-            <Route path="/account" element={<AccountSettings />} />
             <Route path="/post/:slug" element={<PostDetail />} />
-            {/* admin routers */}
+
+            {/* user auth (şimdilik kapalıysa yorumda bırak) */}
+            {/*
+            <Route path="/register" element={<Register />} />
+            <Route path="/login" element={<Login />} />
+            <Route element={<RequireUser />}>
+              <Route path="/account" element={<AccountSettings />} />
+            </Route>
+            */}
+
+            {/* admin login (korumasız) */}
             <Route path="/admin/login" element={<AdminLogin />} />
-            <Route element={<RequireAuth />}>
+
+            {/* admin protected routes */}
+            <Route path="/admin" element={<RequireAuth />}>
               <Route element={<AdminLayout />}>
-                <Route path="/admin" element={<Dashboard />} />
-                <Route path="/admin/account" element={<Account />} />
-                <Route path="/admin/messages" element={<Messages />} />
-                <Route path="/admin/messages/:id" element={<MessageDetail />} />
-                <Route path="/admin/posts" element={<Posts />} />
-                <Route path="/admin/posts/new" element={<PostEditor />} />
-                <Route path="/admin/courses" element={<SettingCourses />} />
-                <Route path="/admin/posts/:id" element={<PostEditor />} />
-                <Route path="/admin/gallery" element={<Gallery />} />
+                {/* /admin */}
+                <Route index element={<Dashboard />} />
+                {/* /admin/account */}
+                <Route path="account" element={<Account />} />
+                {/* /admin/messages */}
+                <Route path="messages" element={<Messages />} />
+                <Route path="messages/:id" element={<MessageDetail />} />
+                {/* /admin/posts */}
+                <Route path="posts" element={<Posts />} />
+                <Route path="posts/new" element={<PostEditor />} />
+                <Route path="posts/:id" element={<PostEditor />} />
+                {/* /admin/courses */}
+                <Route path="courses" element={<SettingCourses />} />
+                {/* /admin/gallery */}
+                <Route path="gallery" element={<Gallery />} />
+                {/* admin özel 404 */}
+                <Route path="*" element={<AdminNotFound />} />
               </Route>
             </Route>
+
+            {/* global 404 */}
             <Route path="*" element={<NotFound />} />
-            <Route path="/admin/*" element={<AdminNotFound />} />
           </Routes>
         </main>
       </div>
