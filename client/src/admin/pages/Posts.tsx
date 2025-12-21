@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { apiFetch, API_BASE } from "../lib/auth";
+import { adminFetch, ADMIN_API_BASE } from "../../lib/adminAuth";
 import "../css/posts-scoped.css";
 
 type Row = {
@@ -29,10 +29,10 @@ export default function Posts() {
     setLoading(true);
     setErr(null);
     try {
-      const url = new URL(`${API_BASE}/api/admin/posts`);
+      const url = new URL(`${ADMIN_API_BASE}/api/admin/posts`);
       if (q.trim()) url.searchParams.set("q", q.trim());
       url.searchParams.set("status", status);
-      const r = await apiFetch(url.toString());
+      const r = await adminFetch(url.toString());
       const d = await r.json();
       if (!r.ok) throw new Error(d?.error || "Liste alınamadı");
       setList(d.list as Row[]);
@@ -55,7 +55,7 @@ export default function Posts() {
     const prev = [...list];
     setList((xs) => xs.filter((x) => x.id !== id));
     try {
-      const r = await apiFetch(`${API_BASE}/api/admin/posts/${id}`, {
+      const r = await adminFetch(`${ADMIN_API_BASE}/api/admin/posts/${id}`, {
         method: "DELETE",
       });
       if (!r.ok) throw new Error("Silinemedi");

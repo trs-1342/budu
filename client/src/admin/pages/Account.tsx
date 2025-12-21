@@ -1,6 +1,6 @@
 // src/admin/pages/Account.tsx
 import { useEffect, useState } from "react";
-import { apiFetch, API_BASE } from "../lib/auth";
+import { adminFetch, ADMIN_API_BASE } from "../../lib/adminAuth";
 import "../css/Account.css";
 
 type Me = {
@@ -20,7 +20,7 @@ export default function Account() {
 
     (async () => {
       try {
-        const r = await apiFetch(`${API_BASE}/api/auth/me`);
+        const r = await adminFetch(`${ADMIN_API_BASE}/api/auth/me`);
         if (!r.ok) throw new Error("Yetkisiz veya oturum süresi doldu.");
 
         const data = await r.json().catch(() => ({} as any));

@@ -30,7 +30,7 @@ const usedJtis = new Set();
 
 const {
   PORT = 1002,
-  CLIENT_ORIGIN = "http://72.62.52.200:1001",
+  CLIENT_ORIGIN = "http://localhost:1001",
   DB_HOST,
   DB_PORT,
   DB_USER,
@@ -211,6 +211,27 @@ function verifySignedVideoToken(token) {
   }
 }
 
+function requireAdmin(req, res, next) {
+  try {
+    const h = req.headers.authorization || "";
+    const token = h.startsWith("Bearer ") ? h.slice(7) : null;
+    if (!token) return res.status(401).json({ error: "Unauthorized" });
+
+    // ✅ Access token her zaman JWT_ACCESS_SECRET ile verify edilir
+    const payload = verifyAccess(token);
+
+    // ✅ Admin rol kontrolü (token üzerinden)
+    if (payload?.role !== "admin") {
+      return res.status(403).json({ error: "Admin yetkisi yok" });
+    }
+
+    req.user = payload;
+    return next();
+  } catch (e) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+}
+
 function authRequired(req, res, next) {
   const auth = req.headers.authorization || "";
   const [type, token] = auth.split(" ");
@@ -360,7 +381,7 @@ function splitDialAndNumber(full) {
 
 const app = express();
 
-const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || "http://72.62.52.200:1001";
+const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || "http://localhost:1001";
 
 app.use(
   cors({
@@ -400,7 +421,7 @@ function assertId(req, res, next) {
 // CORS (credentials + dev allowlist)
 const allowlist = new Set([
   CLIENT_ORIGIN,
-  "http://72.62.52.200:1001",
+  "http://localhost:1001",
   "http://127.0.0.1:1001",
 ]);
 
@@ -589,6 +610,55 @@ app.use(
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
 // AUTHS
+// app.post("/api/auth/login", async (req, res) => {
+//   try {
+//     const { emailOrUsername, password } = req.body || {};
+//     if (!emailOrUsername || !password) {
+//       return res.status(400).json({ error: "Eksik alan" });
+//     }
+
+//     const [rows] = await pool.query(
+//       "SELECT id, username, email, password, create_at FROM users WHERE username = ? OR email = ? LIMIT 1",
+//       [emailOrUsername, emailOrUsername, password]
+//     );
+
+//     if (!rows.length) return res.status(401).json({ error: "Geçersiz kimlik" });
+//     const user = rows[0];
+
+//     // parola kontrolü (plain veya bcrypt)
+//     let ok = false;
+//     if (isBcrypt(user.password))
+//       ok = bcrypt.compareSync(password, user.password);
+//     else ok = password === user.password;
+
+//     if (!ok) return res.status(401).json({ error: "Geçersiz kimlik" });
+
+//     // otomatik bcrypt migrasyon (plain ise)
+//     if (!isBcrypt(user.password)) {
+//       const hash = bcrypt.hashSync(user.password, 10);
+//       await pool.query("UPDATE users SET password = ? WHERE id = ?", [
+//         hash,
+//         user.id,
+//       ]);
+//     }
+
+//     const access = signAccess({ sub: user.id, username: user.username });
+//     const refresh = signRefresh({ sub: user.id });
+
+//     res.cookie("refresh", refresh, {
+//       httpOnly: true,
+//       sameSite: "lax",
+//       secure: false, // prod: true
+//       maxAge: ms(REFRESH_TTL),
+//     });
+
+//     res.json({ access });
+//   } catch (e) {
+//     console.error(e);
+//     res.status(500).json({ error: "Sunucu hatası" });
+//   }
+// });
+
 app.post("/api/auth/login", async (req, res) => {
   try {
     const { emailOrUsername, password } = req.body || {};
@@ -596,46 +666,280 @@ app.post("/api/auth/login", async (req, res) => {
       return res.status(400).json({ error: "Eksik alan" });
     }
 
+    // ✅ role + is_admin çek, ve ✅ parametre sayısını düzelt
     const [rows] = await pool.query(
-      "SELECT id, username, email, password, create_at FROM users WHERE username = ? OR email = ? LIMIT 1",
-      [emailOrUsername, emailOrUsername, password]
+      `SELECT id, username, email, password, role, is_admin, create_at
+       FROM users
+       WHERE username = ? OR email = ?
+       LIMIT 1`,
+      [emailOrUsername, emailOrUsername]
     );
 
     if (!rows.length) return res.status(401).json({ error: "Geçersiz kimlik" });
     const user = rows[0];
 
+    // ✅ Admin paneline sadece admin girsin
+    const dbIsAdmin = user.is_admin === 1 || user.role === "admin";
+    if (!dbIsAdmin) {
+      return res.status(403).json({ error: "Admin yetkisi yok" });
+    }
+
     // parola kontrolü (plain veya bcrypt)
-    let ok = false;
-    if (isBcrypt(user.password))
-      ok = bcrypt.compareSync(password, user.password);
-    else ok = password === user.password;
+    const ok = isBcrypt(user.password)
+      ? bcrypt.compareSync(password, user.password)
+      : password === user.password;
 
     if (!ok) return res.status(401).json({ error: "Geçersiz kimlik" });
 
-    // otomatik bcrypt migrasyon (plain ise)
+    // plain ise bcrypt migrasyon
     if (!isBcrypt(user.password)) {
-      const hash = bcrypt.hashSync(user.password, 10);
+      const hash = bcrypt.hashSync(password, 10); // ✅ user.password değil, girilen password hashlenmeli
       await pool.query("UPDATE users SET password = ? WHERE id = ?", [
         hash,
         user.id,
       ]);
     }
 
-    const access = signAccess({ sub: user.id, username: user.username });
-    const refresh = signRefresh({ sub: user.id });
+    // ✅ access içine role koy (ileride admin kontrolü lazım)
+    const access = signAccess({
+      sub: user.id,
+      username: user.username,
+      email: user.email,
+      role: "admin",
+    });
 
+    const refresh = signRefresh({ sub: user.id, role: "admin" });
+
+    // cookie adı refresh kalsın (mevcut refresh endpointlerini kırma)
     res.cookie("refresh", refresh, {
       httpOnly: true,
       sameSite: "lax",
-      secure: false, // prod: true
+      secure: false,
       maxAge: ms(REFRESH_TTL),
+      path: "/",
     });
 
-    res.json({ access });
+    return res.json({ access, token: access }); // ✅ eski frontend uyumluluğu
+  } catch (e) {
+    console.error("admin/login error:", e);
+    return res.status(500).json({ error: "Sunucu hatası" });
+  }
+});
+
+// app.get("/api/auth/admin-me", requireAdmin, async (req, res) => {
+//   try {
+//     const userId = req.user.sub;
+
+//     const [rows] = await pool.query(
+//       "SELECT id, username, email, role, is_admin, create_at FROM users WHERE id=? LIMIT 1",
+//       [userId]
+//     );
+
+//     if (!rows.length) return res.status(404).json({ error: "User not found" });
+
+//     const u = rows[0];
+//     // DB tarafında da admin olduğunu doğrula (çift kilit)
+//     const dbIsAdmin = u.is_admin === 1 || u.role === "admin";
+//     if (!dbIsAdmin) return res.status(403).json({ error: "Admin yetkisi yok" });
+
+//     res.json({
+//       user: {
+//         id: u.id,
+//         username: u.username,
+//         email: u.email,
+//         create_at: u.create_at,
+//       },
+//     });
+//   } catch (e) {
+//     console.error(e);
+//     res.status(500).json({ error: "Sunucu hatası" });
+//   }
+// });
+
+app.get("/api/auth/admin-me", requireAdmin, async (req, res) => {
+  const userId = req.user.sub;
+  const [rows] = await pool.query(
+    "SELECT id, username, email, role, is_admin, create_at FROM users WHERE id=? LIMIT 1",
+    [userId]
+  );
+  if (!rows.length) return res.status(404).json({ error: "User not found" });
+
+  const u = rows[0];
+  const dbIsAdmin = u.is_admin === 1 || u.role === "admin";
+  if (!dbIsAdmin) return res.status(403).json({ error: "Admin yetkisi yok" });
+
+  return res.json({
+    user: {
+      id: u.id,
+      username: u.username,
+      email: u.email,
+      create_at: u.create_at,
+    },
+  });
+});
+
+app.post("/api/auth/admin-refresh", (req, res) => {
+  try {
+    const token = req.cookies?.admin_refresh;
+    if (!token) return res.status(401).json({ error: "No refresh" });
+
+    // ✅ Refresh token her zaman JWT_REFRESH_SECRET ile verify edilir
+    const payload = verifyRefresh(token);
+
+    if (payload?.role !== "admin") {
+      return res.status(403).json({ error: "Admin refresh değil" });
+    }
+
+    const access = signAccess({
+      sub: payload.sub,
+      username: payload.username,
+      role: "admin",
+    });
+
+    return res.json({ access, token: access });
+  } catch (e) {
+    return res.status(401).json({ error: "Refresh geçersiz" });
+  }
+});
+
+// app.post("/api/auth/admin-login", async (req, res) => {
+//   try {
+//     const { emailOrUsername, password } = req.body || {};
+//     if (!emailOrUsername || !password) {
+//       return res.status(400).json({ error: "Eksik alan" });
+//     }
+
+//     // role + is_admin MUTLAKA çek
+//     const [rows] = await pool.query(
+//       `SELECT id, username, email, password, role, is_admin, create_at
+//        FROM users
+//        WHERE username = ? OR email = ?
+//        LIMIT 1`,
+//       [emailOrUsername, emailOrUsername]
+//     );
+
+//     if (!rows.length) return res.status(401).json({ error: "Geçersiz kimlik" });
+//     const user = rows[0];
+
+//     // 1) DB bazlı admin kontrol (asıl kaynak)
+//     const dbIsAdmin =
+//       user.is_admin === 1 || user.is_admin === true || user.role === "admin";
+
+//     // 2) (Opsiyonel) allowlist kontrol: ENV varsa onu da kabul et
+//     const allow = String(process.env.ADMIN_EMAILS || "")
+//       .split(",")
+//       .map((s) => s.trim().toLowerCase())
+//       .filter(Boolean);
+
+//     const allowlistOk =
+//       allow.length > 0
+//         ? allow.includes(String(user.email).toLowerCase())
+//         : true;
+
+//     // Eğer DB admin değilse, kesin RED
+//     if (!dbIsAdmin) {
+//       return res.status(403).json({ error: "Admin yetkisi yok (DB)" });
+//     }
+
+//     // Eğer allowlist tanımlıysa ve içinde değilse RED
+//     if (!allowlistOk) {
+//       return res.status(403).json({ error: "Admin yetkisi yok (ALLOWLIST)" });
+//     }
+
+//     // password check
+//     let ok = false;
+//     if (isBcrypt(user.password))
+//       ok = bcrypt.compareSync(password, user.password);
+//     else ok = password === user.password;
+//     if (!ok) return res.status(401).json({ error: "Geçersiz kimlik" });
+
+//     const access = signAccess({
+//       sub: user.id,
+//       username: user.username,
+//       role: "admin",
+//     });
+
+//     const refresh = signRefresh({
+//       sub: user.id,
+//       role: "admin",
+//     });
+
+//     res.cookie("admin_refresh", refresh, {
+//       httpOnly: true,
+//       sameSite: "lax",
+//       secure: false, // https + cross-site ise true + none düşün
+//       maxAge: ms(REFRESH_TTL),
+//     });
+
+//     res.json({ access });
+//   } catch (e) {
+//     console.error(e);
+//     res.status(500).json({ error: "Sunucu hatası" });
+//   }
+// });
+
+app.post("/api/auth/admin-login", async (req, res) => {
+  try {
+    const { emailOrUsername, password } = req.body || {};
+    if (!emailOrUsername || !password) {
+      return res.status(400).json({ error: "Eksik alan" });
+    }
+
+    const [rows] = await pool.query(
+      `SELECT id, username, email, password, role, is_admin, create_at
+       FROM users
+       WHERE username = ? OR email = ?
+       LIMIT 1`,
+      [emailOrUsername, emailOrUsername]
+    );
+
+    if (!rows.length) return res.status(401).json({ error: "Geçersiz kimlik" });
+    const user = rows[0];
+
+    const dbIsAdmin = user.is_admin === 1 || user.role === "admin";
+    if (!dbIsAdmin)
+      return res.status(403).json({ error: "Admin yetkisi yok (DB)" });
+
+    const ok = isBcrypt(user.password)
+      ? bcrypt.compareSync(password, user.password)
+      : password === user.password;
+
+    if (!ok) return res.status(401).json({ error: "Geçersiz kimlik" });
+
+    const access = signAccess({
+      sub: user.id,
+      username: user.username,
+      email: user.email,
+      role: "admin",
+    });
+
+    const refresh = signRefresh({
+      sub: user.id,
+      role: "admin",
+    });
+
+    res.cookie("admin_refresh", refresh, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: false,
+      maxAge: ms(REFRESH_TTL),
+      path: "/", // ✅ BUNU EKLE
+    });
+
+    return res.json({ access, token: access }); // ✅ uyumluluk
   } catch (e) {
     console.error(e);
-    res.status(500).json({ error: "Sunucu hatası" });
+    return res.status(500).json({ error: "Sunucu hatası" });
   }
+});
+
+app.post("/api/auth/admin-logout", (req, res) => {
+  res.clearCookie("admin_refresh", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: false,
+  });
+  res.json({ ok: true });
 });
 
 // ! USER LOGIN & REGISTER & ME
@@ -1782,7 +2086,7 @@ app.get("/api/courses/:id/play", requireAuth, async (req, res) => {
   });
 
   // 5) playback endpoint yolunu döndür (aynı origin:1002)
-  // istemci bunu doğrudan video src olarak kullanacak: http://72.62.52.200:1002/courses/playback/<token>
+  // istemci bunu doğrudan video src olarak kullanacak: http://localhost:1002/courses/playback/<token>
   return res.json({ playback: `/courses/playback/${token}` });
 });
 
@@ -2034,5 +2338,5 @@ app.use((_req, res) => res.status(404).json({ error: "Not Found" }));
 
 // start
 app.listen(Number(PORT), () => {
-  console.log(`API listening on http://72.62.52.200:${PORT}`);
+  console.log(`API listening on http://localhost:${PORT}`);
 });

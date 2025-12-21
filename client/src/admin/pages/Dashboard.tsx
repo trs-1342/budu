@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { apiFetch, API_BASE } from "../lib/auth";
+import { adminFetch, ADMIN_API_BASE } from "../../lib/adminAuth";
 import "../css/layout-scoped.css";
 
 type Stats = {
@@ -18,7 +18,7 @@ export default function Dashboard() {
     setLoading(true);
     setErr(null);
     try {
-      const r = await apiFetch(`${API_BASE}/api/messages/stats`);
+      const r = await adminFetch(`${ADMIN_API_BASE}/api/messages/stats`);
       const d = await r.json();
       if (!r.ok) throw new Error(d?.error || "İstatistik alınamadı");
       setStats(d as Stats);

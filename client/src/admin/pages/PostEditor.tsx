@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { apiFetch, API_BASE } from "../lib/auth";
+import { adminFetch, ADMIN_API_BASE } from "../../lib/adminAuth";
 import "../css/editor-scoped.css";
 
 type PageOpt = { id: number; key_slug: string; title: string; path: string };
@@ -44,14 +44,14 @@ export default function PostEditor() {
   async function uploadCover(file: File) {
     const fd = new FormData();
     fd.append("file", file);
-    const r = await apiFetch(`${API_BASE}/api/admin/upload`, {
+    const r = await adminFetch(`${ADMIN_API_BASE}/api/admin/upload`, {
       method: "POST",
       body: fd, // Content-Type otomatik FormData
     });
     const d = await r.json();
     if (!r.ok) throw new Error(d?.error || "Yüklenemedi");
     // server hem path hem url döndürüyor; relative path ile çalışmak daha güvenli:
-    setF((s) => ({ ...s, cover_url: `${API_BASE}${d.path}` }));
+    setF((s) => ({ ...s, cover_url: `${ADMIN_API_BASE}${d.path}` }));
   }
 
   // load pages + item
@@ -59,9 +59,9 @@ export default function PostEditor() {
     (async () => {
       try {
         const [pg, itm] = await Promise.all([
-          apiFetch(`${API_BASE}/api/admin/pages`).then((r) => r.json()),
+          adminFetch(`${ADMIN_API_BASE}/api/admin/pages`).then((r) => r.json()),
           editing
-            ? apiFetch(`${API_BASE}/api/admin/posts/${id}`).then((r) =>
+            ? adminFetch(`${ADMIN_API_BASE}/api/admin/posts/${id}`).then((r) =>
                 r.json()
               )
             : Promise.resolve(null),
@@ -118,7 +118,7 @@ export default function PostEditor() {
         pinned: f.pinned ? 1 : 0,
         published_at: fromLocalInput(f.published_at), // MySQL DATETIME ya da null
       };
-      const r = await apiFetch(`${API_BASE}/api/admin/posts/save`, {
+      const r = await adminFetch(`${ADMIN_API_BASE}/api/admin/posts/save`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

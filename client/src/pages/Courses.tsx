@@ -6,7 +6,7 @@ import "../css/Courses.css";
 import PostsFeed from "./posts/PostsFeed";
 import { api } from "../lib/api";
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://72.62.52.200:1002";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:1002";
 
 type Course = {
   id: number;

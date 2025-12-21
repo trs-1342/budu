@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { apiFetch, API_BASE } from "../lib/auth";
+import { adminFetch, ADMIN_API_BASE } from "../../lib/adminAuth";
 import "../css/message-detail-scoped.css";
 
 type Msg = {
@@ -25,7 +25,7 @@ export default function MessageDetail() {
     setLoading(true);
     setErr(null);
     try {
-      const r = await apiFetch(`${API_BASE}/api/messages/${id}`);
+      const r = await adminFetch(`${ADMIN_API_BASE}/api/messages/${id}`);
       const d = await r.json();
       if (!r.ok) throw new Error(d?.error || "Bulunamadı");
       setItem(d.item as Msg);
@@ -41,7 +41,7 @@ export default function MessageDetail() {
   }, [id]);
 
   async function setRead(read: boolean) {
-    await apiFetch(`${API_BASE}/api/messages/${id}/read`, {
+    await adminFetch(`${ADMIN_API_BASE}/api/messages/${id}/read`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ read }),
@@ -50,7 +50,7 @@ export default function MessageDetail() {
   }
 
   async function setArchived(archived: boolean) {
-    await apiFetch(`${API_BASE}/api/messages/${id}/archive`, {
+    await adminFetch(`${ADMIN_API_BASE}/api/messages/${id}/archive`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ archived }),
@@ -59,7 +59,7 @@ export default function MessageDetail() {
   }
 
   async function remove() {
-    await apiFetch(`${API_BASE}/api/messages/${id}`, { method: "DELETE" });
+    await adminFetch(`${ADMIN_API_BASE}/api/messages/${id}`, { method: "DELETE" });
     navigate("/admin/messages");
   }
 

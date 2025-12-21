@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { apiFetch, API_BASE } from "../lib/auth";
+import { adminFetch, ADMIN_API_BASE } from "../../lib/adminAuth";
 import "../css/admin-courses-scoped.css";
 
 type Course = {
@@ -28,7 +28,7 @@ export default function SettingCourses() {
     setLoading(true);
     setErr(null);
     try {
-      const r = await apiFetch(`${API_BASE}/api/admin/courses`);
+      const r = await adminFetch(`${ADMIN_API_BASE}/api/admin/courses`);
       const d = await r.json();
       if (!r.ok) throw new Error(d?.error || "Liste alınamadı");
       setList(d.list as Course[]);
@@ -61,8 +61,8 @@ export default function SettingCourses() {
       if (detail.trim()) fd.append("detail", detail.trim());
       if (file) fd.append("video", file);
 
-      // NOT: apiFetch FormData ile 'Content-Type' set etmez; diğer admin sayfalarıyla aynı. :contentReference[oaicite:3]{index=3}
-      const r = await apiFetch(`${API_BASE}/api/admin/courses`, {
+      // NOT: adminFetch FormData ile 'Content-Type' set etmez; diğer admin sayfalarıyla aynı. :contentReference[oaicite:3]{index=3}
+      const r = await adminFetch(`${ADMIN_API_BASE}/api/admin/courses`, {
         method: "POST",
         body: fd,
       });
@@ -87,7 +87,7 @@ export default function SettingCourses() {
     const prev = [...list];
     setList((xs) => xs.filter((x) => x.id !== id));
     try {
-      const r = await apiFetch(`${API_BASE}/api/admin/courses/${id}`, {
+      const r = await adminFetch(`${ADMIN_API_BASE}/api/admin/courses/${id}`, {
         method: "DELETE",
       });
       if (!r.ok) throw new Error("Silinemedi");
@@ -212,7 +212,7 @@ export default function SettingCourses() {
                     href={
                       c.video_url.startsWith("http")
                         ? c.video_url
-                        : `${API_BASE}${c.video_url}`
+                        : `${ADMIN_API_BASE}${c.video_url}`
                     }
                     download
                     target="_blank"
@@ -252,7 +252,7 @@ export default function SettingCourses() {
                   src={
                     c.video_url.startsWith("http")
                       ? c.video_url
-                      : `${API_BASE}${c.video_url}`
+                      : `${ADMIN_API_BASE}${c.video_url}`
                   }
                 />
               </div>

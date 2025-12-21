@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import * as Api from "../../lib/api";
+import { saveUserAccess, clearUserAccess } from "../../lib/userAuth";
+import { clearAdminAccess } from "../../lib/adminAuth";
 import "../../css/Login.css";
 
 type LoginBody = {
@@ -17,36 +19,28 @@ async function loginRequest(body: LoginBody) {
     return anyApi.AuthApi.login(body);
   }
 
-  // 2) Varsa api(path, init) kullan  👉 DİKKAT: JSON.stringify YOK
+  // 2) Varsa api(path, init) kullan
+  // ÖNEMLİ: bizim lib/api.tsx wrapper'ı body'yi JSON.stringify yapıyor.
+  // O yüzden burada body'yi obje göndermek DOĞRU.
   if (typeof anyApi.api === "function") {
     return anyApi.api("/api/auth/user-login", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body, // <-- DOĞRUDAN NESNE/OBJE
-      // json: body,        // (Wrapper 'json' bekliyorsa bunu açıp 'body'yi kaldırabilirsin)
+      body, // ✅ wrapper stringify ediyor
     });
   }
 
-  // 3) Fallback fetch  👉 burada TEK KEZ string’le
-  const res = await fetch("/api/auth/user-login", {
+  // 3) Fallback fetch
+  const base = (anyApi.API_BASE as string) || "";
+  const res = await fetch(`${base}/api/auth/user-login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
     body: JSON.stringify(body),
   });
-  if (!res.ok) {
-    let j: any = {};
-    try {
-      j = await res.json();
-    } catch { }
-    throw new Error(j?.error || res.statusText);
-  }
-  try {
-    return await res.json();
-  } catch {
-    return {};
-  }
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.error || "Giriş başarısız.");
+  return data;
 }
 
 export default function Login() {
@@ -68,22 +62,32 @@ export default function Login() {
       return;
     }
 
+    // ✅ "Tek 1 tane olacak": user login olunca admin oturumunu kapat
+    clearAdminAccess();
+    // clearUserAccess yoksa userAuth'a ekle veya bu satırı kaldır
+    clearUserAccess?.();
+
     try {
       setLoading(true);
+
       const resp: any = await loginRequest({
         emailOrUsername: login.trim(),
         password,
         remember,
       });
-      // localStorage.setItem("remember_me", remember ? "1" : "0");
+
       // token varsa kaydet
       const token = resp?.token || resp?.access || resp?.accessToken;
-      if (token) {
-        Api.saveAccess(token);   // <-- asıl kritik satır
-        localStorage.setItem("token", token); // backward compatibility
+
+      // ✅ Token yoksa sessiz geçme, hata ver
+      if (!token) {
+        throw new Error("Giriş başarısız: Sunucu token döndürmedi.");
       }
+
+      saveUserAccess(token, remember);
       localStorage.setItem("remember_me", remember ? "1" : "0");
-      nav("/account", { replace: true }); // istersen "/" yap
+
+      nav("/account", { replace: true });
     } catch (e: any) {
       setErr(e?.message || "Giriş başarısız.");
     } finally {
@@ -106,6 +110,7 @@ export default function Login() {
             autoComplete="username"
             autoFocus
             required
+            disabled={loading}
           />
         </label>
 
@@ -119,6 +124,7 @@ export default function Login() {
             placeholder="••••••••"
             autoComplete="current-password"
             required
+            disabled={loading}
           />
         </label>
 
@@ -128,6 +134,7 @@ export default function Login() {
               type="checkbox"
               checked={remember}
               onChange={(e) => setRemember(e.target.checked)}
+              disabled={loading}
             />
             <span>Beni hatırla</span>
           </label>
@@ -139,7 +146,7 @@ export default function Login() {
 
         {err && <div className="auth-error">{err}</div>}
 
-        <button className="auth-btn primary" disabled={loading}>
+        <button className="auth-btn primary" type="submit" disabled={loading}>
           {loading ? "Giriş yapılıyor…" : "Giriş Yap"}
         </button>
 

@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { apiFetch, API_BASE } from "../lib/auth";
+import { adminFetch, ADMIN_API_BASE } from "../../lib/adminAuth";
 import { BiSolidArchiveIn } from "react-icons/bi";
 import { MdMarkunread, MdMarkEmailUnread } from "react-icons/md";
 import "../css/messages-scoped.css";
@@ -34,10 +34,10 @@ export default function Messages() {
     setLoading(true);
     setErr(null);
     try {
-      const url = new URL(`${API_BASE}/api/messages`);
+      const url = new URL(`${ADMIN_API_BASE}/api/messages`);
       if (debouncedQ.trim()) url.searchParams.set("q", debouncedQ.trim());
       url.searchParams.set("status", status);
-      const r = await apiFetch(url.toString());
+      const r = await adminFetch(url.toString());
       const data = await r.json();
       if (!r.ok) throw new Error(data?.error || "Liste alınamadı");
       setList(data.list as Msg[]);
@@ -71,11 +71,14 @@ export default function Messages() {
       cur.map((x) => (x.id === m.id ? { ...x, is_read: read ? 1 : 0 } : x))
     );
     try {
-      const r = await apiFetch(`${API_BASE}/api/messages/${m.id}/read`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ read }),
-      });
+      const r = await adminFetch(
+        `${ADMIN_API_BASE}/api/messages/${m.id}/read`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ read }),
+        }
+      );
       if (!r.ok) throw new Error("Güncellenemedi");
     } catch {
       setList(prev);
@@ -90,11 +93,14 @@ export default function Messages() {
       )
     );
     try {
-      const r = await apiFetch(`${API_BASE}/api/messages/${m.id}/archive`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ archived }),
-      });
+      const r = await adminFetch(
+        `${ADMIN_API_BASE}/api/messages/${m.id}/archive`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ archived }),
+        }
+      );
       if (!r.ok) throw new Error("Güncellenemedi");
     } catch {
       setList(prev);
@@ -105,7 +111,7 @@ export default function Messages() {
     const prev = [...list];
     setList((cur) => cur.filter((x) => x.id !== m.id));
     try {
-      const r = await apiFetch(`${API_BASE}/api/messages/${m.id}`, {
+      const r = await adminFetch(`${ADMIN_API_BASE}/api/messages/${m.id}`, {
         method: "DELETE",
       });
       if (!r.ok) throw new Error("Silinemedi");

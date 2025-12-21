@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { API_BASE } from "../lib/auth";
+import { ADMIN_API_BASE } from "../../lib/adminAuth";
 
 type ImageItem = {
   name: string;
@@ -11,7 +11,7 @@ export default function Gallery() {
   const [loading, setLoading] = useState(true);
 
   const fetchImages = () => {
-    fetch(`${API_BASE}/api/admin/gallery`, {
+    fetch(`${ADMIN_API_BASE}/api/admin/gallery`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem("access")}`,
       },
@@ -30,7 +30,7 @@ export default function Gallery() {
       return;
     try {
       const res = await fetch(
-        `${API_BASE}/api/admin/gallery/${encodeURIComponent(name)}`,
+        `${ADMIN_API_BASE}/api/admin/gallery/${encodeURIComponent(name)}`,
         {
           method: "DELETE",
           headers: {
