@@ -1,4 +1,4 @@
-const API = import.meta.env.VITE_API_BASE || "http://localhost:1002";
+const API = import.meta.env.VITE_API_BASE || "http://72.62.52.200:1002";
 export const ADMIN_API_BASE = API;
 
 // Admin için ayrı key'ler

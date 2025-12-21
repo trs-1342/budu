@@ -17,7 +17,7 @@ type Post = {
   updated_at: string;
 };
 
-const API = import.meta.env.VITE_API_BASE || "http://localhost:1002";
+const API = import.meta.env.VITE_API_BASE || "http://72.62.52.200:1002";
 
 export default function PostDetail() {
   const { slug } = useParams();
