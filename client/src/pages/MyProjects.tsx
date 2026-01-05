@@ -2,34 +2,45 @@ import PostsFeed from "./posts/PostsFeed";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import "../css/Projects.css";
-import product1 from "../assets/image1.png";
-import product2 from "../assets/image2.png";
+import posts from "../data/manuel-post.json";
+// import product1 from "../assets/image1.png";
+// import product2 from "../assets/image2.png";
 
-type Projects = {
-  id: string;
+// type Projects = {
+//   id: string;
+//   title: string;
+//   description: string;
+//   image: string;
+//   href: string;
+// };
+
+// const projects: Projects[] = [
+//   {
+//     id: "design-book",
+//     title: "كتاب يتكون من طرق تقنية في اتخاذ قرارات التصميم",
+//     description:
+//       "كتاب إلكتروني تم إعداده لمساعدتك على رفع مستوى احترافيتك في التصميم.",
+//     image: product1,
+//     href: "/projects/design-book",
+//   },
+//   {
+//     id: "identity-course",
+//     title: "دورة تصميم وبناء الهوية البصرية",
+//     description: "دورة تفاعلية تركز على تمكين المستقلين في تصميم الهوية.",
+//     image: product2,
+//     href: "/projects/identity-course",
+//   },
+// ];
+
+type Post = {
+  id: number;
+  slug: string;
   title: string;
-  description: string;
-  image: string;
-  href: string;
+  summary: string;
+  excerpt: string; // detail sayfasında kullanılacak
+  cover: string;
+  created_at: string;
 };
-
-const projects: Projects[] = [
-  {
-    id: "design-book",
-    title: "كتاب يتكون من طرق تقنية في اتخاذ قرارات التصميم",
-    description:
-      "كتاب إلكتروني تم إعداده لمساعدتك على رفع مستوى احترافيتك في التصميم.",
-    image: product1,
-    href: "/projects/design-book",
-  },
-  {
-    id: "identity-course",
-    title: "دورة تصميم وبناء الهوية البصرية",
-    description: "دورة تفاعلية تركز على تمكين المستقلين في تصميم الهوية.",
-    image: product2,
-    href: "/projects/identity-course",
-  },
-];
 
 function MyProjects() {
   return (
@@ -51,7 +62,7 @@ function MyProjects() {
           </header>
 
           {/* kart grid */}
-          <div
+          {/* <div
             className="projects-grid"
             data-reveal-group
             style={{ "--reveal-stagger": "90ms" } as React.CSSProperties}
@@ -86,7 +97,43 @@ function MyProjects() {
                 </div>
               </article>
             ))}
-          </div>
+          </div> */}
+
+          <main className="courses-wrap">
+            <div className="courses-grid">
+              {(posts as Post[]).map((post) => (
+                <article key={post.id} className="course-card">
+                  <div className="course-media">
+                    <img
+                      src={new URL(post.cover, import.meta.url).pathname}
+                      alt={post.title}
+                      loading="lazy"
+                    />
+                  </div>
+
+                  <header className="course-head">
+                    <h2 className="course-title">
+                      {/* Başlıkta da refresh istiyorsan Link yerine a kullan */}
+                      <a href={`/post/${post.slug}`}>{post.title}</a>
+                    </h2>
+                    <time className="course-time">
+                      {new Date(post.created_at).toLocaleDateString()}
+                    </time>
+                  </header>
+
+                  {/* KARTTA SADECE ÖZET */}
+                  <p className="course-desc">{post.excerpt}</p>
+
+                  <footer className="course-actions">
+                    {/* HARD RELOAD */}
+                    <a href={`/post/${post.slug}`} className="watch-link">
+                      اقرأ →
+                    </a>
+                  </footer>
+                </article>
+              ))}
+            </div>
+          </main>
         </section>
       </div>
       <PostsFeed pageKey="projects" limit={6} showCover showExcerpt />

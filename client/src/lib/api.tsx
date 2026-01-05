@@ -1,5 +1,5 @@
 // src/lib/api.tsx
-const API = import.meta.env.VITE_API_BASE || "http://72.62.52.200:1002";
+const API = import.meta.env.VITE_API_BASE || "http://192.168.1.152:1002";
 export const API_BASE = API;
 
 /** access'ı oku (geri uyumluluk: token da kabul) */
@@ -13,10 +13,15 @@ export function getAccess(): string | null {
 }
 
 /** access kaydet (remember=true → localStorage, false → sessionStorage) */
+// export function saveAccess(token: string, remember = true) {
+//   const store = remember ? localStorage : sessionStorage;
+//   store.setItem("access", token);
+//   store.setItem("token", token); // eski kodlarla uyum
+// }
+
 export function saveAccess(token: string, remember = true) {
   const store = remember ? localStorage : sessionStorage;
   store.setItem("access", token);
-  store.setItem("token", token); // eski kodlarla uyum
 }
 
 /** Eski kodları kırmamak için alias: getToken = getAccess */

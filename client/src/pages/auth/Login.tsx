@@ -1,7 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import * as Api from "../../lib/api";
-import { saveUserAccess, clearUserAccess } from "../../lib/userAuth";
+import {
+  getUserAccess,
+  saveUserAccess,
+  clearUserAccess,
+} from "../../lib/userAuth";
 import { clearAdminAccess } from "../../lib/adminAuth";
 import "../../css/Login.css";
 
@@ -11,27 +14,10 @@ type LoginBody = {
   remember?: boolean;
 };
 
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:1002";
+
 async function loginRequest(body: LoginBody) {
-  const anyApi: any = Api as any;
-
-  // 1) Varsa AuthApi.login kullan
-  if (anyApi.AuthApi?.login) {
-    return anyApi.AuthApi.login(body);
-  }
-
-  // 2) Varsa api(path, init) kullan
-  // ÖNEMLİ: bizim lib/api.tsx wrapper'ı body'yi JSON.stringify yapıyor.
-  // O yüzden burada body'yi obje göndermek DOĞRU.
-  if (typeof anyApi.api === "function") {
-    return anyApi.api("/api/auth/user-login", {
-      method: "POST",
-      body, // ✅ wrapper stringify ediyor
-    });
-  }
-
-  // 3) Fallback fetch
-  const base = (anyApi.API_BASE as string) || "";
-  const res = await fetch(`${base}/api/auth/user-login`, {
+  const res = await fetch(`${API_BASE}/api/auth/user-login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -39,7 +25,11 @@ async function loginRequest(body: LoginBody) {
   });
 
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.error || "Giriş başarısız.");
+
+  if (!res.ok) {
+    throw new Error(data?.error || "Giriş başarısız.");
+  }
+
   return data;
 }
 
@@ -52,6 +42,7 @@ export default function Login() {
 
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [loggedIn, setLoggedIn] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -62,10 +53,9 @@ export default function Login() {
       return;
     }
 
-    // ✅ "Tek 1 tane olacak": user login olunca admin oturumunu kapat
+    // 🔒 tek oturum kuralı
     clearAdminAccess();
-    // clearUserAccess yoksa userAuth'a ekle veya bu satırı kaldır
-    clearUserAccess?.();
+    clearUserAccess();
 
     try {
       setLoading(true);
@@ -76,24 +66,29 @@ export default function Login() {
         remember,
       });
 
-      // token varsa kaydet
-      const token = resp?.token || resp?.access || resp?.accessToken;
-
-      // ✅ Token yoksa sessiz geçme, hata ver
+      const token = resp?.access || resp?.token;
       if (!token) {
-        throw new Error("Giriş başarısız: Sunucu token döndürmedi.");
+        throw new Error("Sunucu token döndürmedi.");
       }
 
       saveUserAccess(token, remember);
       localStorage.setItem("remember_me", remember ? "1" : "0");
 
-      nav("/account", { replace: true });
+      // ❗ redirect YOK
+      setLoggedIn(true);
     } catch (e: any) {
       setErr(e?.message || "Giriş başarısız.");
     } finally {
       setLoading(false);
     }
   }
+
+  // ✅ REDIRECT SADECE BURADA
+  useEffect(() => {
+    if (loggedIn && getUserAccess()) {
+      nav("/account", { replace: true });
+    }
+  }, [loggedIn, nav]);
 
   return (
     <div className="auth-wrap">
@@ -106,11 +101,9 @@ export default function Login() {
             className="auth-input"
             value={login}
             onChange={(e) => setLogin(e.target.value)}
-            placeholder="user@site.com veya trs"
             autoComplete="username"
-            autoFocus
-            required
             disabled={loading}
+            required
           />
         </label>
 
@@ -121,10 +114,9 @@ export default function Login() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••"
             autoComplete="current-password"
-            required
             disabled={loading}
+            required
           />
         </label>
 
@@ -154,6 +146,9 @@ export default function Login() {
           <span>Hesabın yok mu?</span>
           <Link className="auth-link" to="/register">
             Kayıt ol
+          </Link>
+          <Link className="auth-link" to="/">
+            Anasayfa
           </Link>
         </div>
       </form>

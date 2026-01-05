@@ -1,3 +1,4 @@
+import { saveAccess } from "../../lib/api";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../css/admin-scoped.css";
@@ -43,7 +44,7 @@ export default function AdminLogin() {
       if (!data?.access) {
         throw new Error("Sunucu access token döndürmedi.");
       }
-      saveAdminAccess(data.access, remember);
+      saveAccess(data.access, remember);
       window.location.href = "/admin";
     } catch (e: any) {
       setErr(e?.message || "Giriş başarısız.");

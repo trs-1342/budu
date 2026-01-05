@@ -1,7 +1,9 @@
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
-const { randomBytes } = require("node:crypto");
+// const { randomBytes } = require("node:crypto");
+const crypto = require("node:crypto");
+const { randomBytes } = crypto;
 const mysql = require("mysql2/promise");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -30,7 +32,7 @@ const usedJtis = new Set();
 
 const {
   PORT = 1002,
-  CLIENT_ORIGIN = "http://72.62.52.200:1001",
+  CLIENT_ORIGIN = "http://192.168.1.152:1001",
   DB_HOST,
   DB_PORT,
   DB_USER,
@@ -381,7 +383,8 @@ function splitDialAndNumber(full) {
 
 const app = express();
 
-const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || "http://72.62.52.200:1001";
+const FRONTEND_ORIGIN =
+  process.env.FRONTEND_ORIGIN || "http://192.168.1.152:1001";
 
 app.use(
   cors({
@@ -421,7 +424,7 @@ function assertId(req, res, next) {
 // CORS (credentials + dev allowlist)
 const allowlist = new Set([
   CLIENT_ORIGIN,
-  "http://72.62.52.200:1001",
+  "http://192.168.1.152:1001",
   "http://127.0.0.1:1001",
 ]);
 
@@ -945,12 +948,89 @@ app.post("/api/auth/admin-logout", (req, res) => {
 // ! USER LOGIN & REGISTER & ME
 
 // === CUSTOMERS LOGIN (user) ===
+// app.post("/api/auth/user-login", async (req, res) => {
+//   try {
+//     const idf =
+//       req.body?.emailOrUsername || req.body?.email || req.body?.username;
+//     const { password } = req.body || {};
+//     if (!idf || !password) return res.status(400).json({ error: "Eksik alan" });
+
+//     const [rows] = await pool.query(
+//       `SELECT id, username, email, password, phone, country_dial, membership_notify
+//          FROM customers
+//         WHERE email = ? OR username = ?
+//         LIMIT 1`,
+//       [idf, idf]
+//     );
+//     if (!rows.length) return res.status(401).json({ error: "Geçersiz kimlik" });
+
+//     const u = rows[0];
+//     const ok = isBcrypt(u.password)
+//       ? await bcrypt.compare(password, u.password)
+//       : password === u.password;
+//     if (!ok) return res.status(401).json({ error: "Geçersiz kimlik" });
+
+//     // plain ise sessiz migrasyon
+//     if (!isBcrypt(u.password)) {
+//       const hash = await bcrypt.hash(u.password, 10);
+//       await pool.query("UPDATE customers SET password=? WHERE id=?", [
+//         hash,
+//         u.id,
+//       ]);
+//     }
+
+//     // >>> user'a özel access/refresh + aud: 'user'
+//     const access = signAccess({
+//       sub: u.id,
+//       email: u.email,
+//       role: "user",
+//       aud: "user",
+//     });
+//     const refresh = signRefresh({ sub: u.id, aud: "user" });
+
+//     res.cookie("u_access", access, {
+//       httpOnly: true,
+//       sameSite: "lax",
+//       secure: false,
+//       maxAge: ms(ACCESS_TTL),
+//       path: "/",
+//     });
+//     res.cookie("u_refresh", refresh, {
+//       httpOnly: true,
+//       sameSite: "lax",
+//       secure: false,
+//       maxAge: ms(REFRESH_TTL),
+//       path: "/",
+//     });
+
+//     // Frontend uyumluluğu için JSON’a da koyuyorum
+//     return res.json({
+//       access,
+//       token: access,
+//       user: {
+//         id: u.id,
+//         email: u.email,
+//         username: u.username,
+//         phone: u.phone || null,
+//         countryDial: u.country_dial || null,
+//         membershipNotify: !!u.membership_notify,
+//       },
+//     });
+//   } catch (e) {
+//     console.error("user-login error:", e);
+//     res.status(500).json({ error: "Sunucu hatası" });
+//   }
+// });
+
 app.post("/api/auth/user-login", async (req, res) => {
   try {
     const idf =
       req.body?.emailOrUsername || req.body?.email || req.body?.username;
     const { password } = req.body || {};
-    if (!idf || !password) return res.status(400).json({ error: "Eksik alan" });
+
+    if (!idf || !password) {
+      return res.status(400).json({ error: "Eksik alan" });
+    }
 
     const [rows] = await pool.query(
       `SELECT id, username, email, password, phone, country_dial, membership_notify
@@ -959,51 +1039,70 @@ app.post("/api/auth/user-login", async (req, res) => {
         LIMIT 1`,
       [idf, idf]
     );
-    if (!rows.length) return res.status(401).json({ error: "Geçersiz kimlik" });
+
+    if (!rows.length) {
+      return res.status(401).json({ error: "Geçersiz kimlik" });
+    }
 
     const u = rows[0];
+
     const ok = isBcrypt(u.password)
       ? await bcrypt.compare(password, u.password)
       : password === u.password;
-    if (!ok) return res.status(401).json({ error: "Geçersiz kimlik" });
 
-    // plain ise sessiz migrasyon
+    if (!ok) {
+      return res.status(401).json({ error: "Geçersiz kimlik" });
+    }
+
+    // 🔁 plain → bcrypt sessiz migrasyon
     if (!isBcrypt(u.password)) {
-      const hash = await bcrypt.hash(u.password, 10);
+      const hash = await bcrypt.hash(password, 10);
       await pool.query("UPDATE customers SET password=? WHERE id=?", [
         hash,
         u.id,
       ]);
     }
 
-    // >>> user'a özel access/refresh + aud: 'user'
+    // 🔐 TOKEN ÜRET (önce!)
     const access = signAccess({
       sub: u.id,
       email: u.email,
       role: "user",
       aud: "user",
     });
-    const refresh = signRefresh({ sub: u.id, aud: "user" });
 
-    res.cookie("u_access", access, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: false,
-      maxAge: ms(ACCESS_TTL),
-      path: "/",
-    });
-    res.cookie("u_refresh", refresh, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: false,
-      maxAge: ms(REFRESH_TTL),
-      path: "/",
+    const refresh = signRefresh({
+      sub: u.id,
+      aud: "user",
     });
 
-    // Frontend uyumluluğu için JSON’a da koyuyorum
-    return res.json({
-      access,
-      token: access,
+    // ❗ Güvenlik: token üretilemediyse SAKIN response dönme
+    if (!access || !refresh) {
+      console.error("JWT üretilemedi");
+      return res.status(500).json({ error: "Token üretilemedi" });
+    }
+
+    // 🍪 Cookie (opsiyonel ama devam edebilir)
+    // res.cookie("u_access", access, {
+    //   httpOnly: true,
+    //   sameSite: "lax",
+    //   secure: false, // prod'da true
+    //   maxAge: ms(ACCESS_TTL),
+    //   path: "/",
+    // });
+
+    // res.cookie("u_refresh", refresh, {
+    //   httpOnly: true,
+    //   sameSite: "lax",
+    //   secure: false, // prod'da true
+    //   maxAge: ms(REFRESH_TTL),
+    //   path: "/",
+    // });
+
+    // ✅ ASIL SÖZLEŞME BURASI
+    return res.status(200).json({
+      access, // 👈 frontend bunu bekliyor
+      token: access, // 👈 geriye dönük uyum
       user: {
         id: u.id,
         email: u.email,
@@ -1015,7 +1114,7 @@ app.post("/api/auth/user-login", async (req, res) => {
     });
   } catch (e) {
     console.error("user-login error:", e);
-    res.status(500).json({ error: "Sunucu hatası" });
+    return res.status(500).json({ error: "Sunucu hatası" });
   }
 });
 
@@ -2086,7 +2185,7 @@ app.get("/api/courses/:id/play", requireAuth, async (req, res) => {
   });
 
   // 5) playback endpoint yolunu döndür (aynı origin:1002)
-  // istemci bunu doğrudan video src olarak kullanacak: http://72.62.52.200:1002/courses/playback/<token>
+  // istemci bunu doğrudan video src olarak kullanacak: http://192.168.1.152:1002/courses/playback/<token>
   return res.json({ playback: `/courses/playback/${token}` });
 });
 
@@ -2338,5 +2437,5 @@ app.use((_req, res) => res.status(404).json({ error: "Not Found" }));
 
 // start
 app.listen(Number(PORT), () => {
-  console.log(`API listening on http://72.62.52.200:${PORT}`);
+  console.log(`API listening on http://192.168.1.152:${PORT}`);
 });

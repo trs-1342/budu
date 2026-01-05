@@ -31,8 +31,10 @@ function Main() {
             يعكس هوية العلامات التجارية.
           </p>
           <div className="btn-group">
-            <button className="btn btn-secondary">نموذج تطبيق المشروع</button>
-            <button className="btn btn-primary">تواصل معي</button>
+            {/* <button className="btn btn-secondary">نموذج تطبيق المشروع</button> */}
+            <a href="https://wa.me/+905374943971" target="_blank" rel="noopener noreferrer">
+              <button className="btn btn-primary">تواصل معي</button>
+            </a>
           </div>
         </section>
       </main>

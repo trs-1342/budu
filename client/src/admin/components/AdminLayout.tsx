@@ -8,19 +8,27 @@ import {
   ADMIN_API_BASE,
   clearAdminAccess,
 } from "../../lib/adminAuth";
+// import { apiFetch } from "../lib/auth";
 
 type Me = { id: number; username: string; email: string; create_at: string };
 
 export default function AdminLayout() {
   const [me, setMe] = useState<Me | null>(null);
 
+  // useEffect(() => {
+  //   adminFetch(`${ADMIN_API_BASE}/api/auth/admin-me`)
+  //     .then(async (r) => {
+  //       const d = await r.json().catch(() => ({}));
+  //       if (!r.ok) throw new Error(d?.error || "Unauthorized");
+  //       setMe(d.user);
+  //     })
+  //     .catch(() => setMe(null));
+  // }, []);
+
   useEffect(() => {
-    adminFetch(`${ADMIN_API_BASE}/api/auth/admin-me`)
-      .then(async (r) => {
-        const d = await r.json().catch(() => ({}));
-        if (!r.ok) throw new Error(d?.error || "Unauthorized");
-        setMe(d.user);
-      })
+    adminFetch(`${ADMIN_API_BASE}/api/auth/me`)
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((d) => setMe(d.user))
       .catch(() => setMe(null));
   }, []);
 
@@ -34,6 +42,8 @@ export default function AdminLayout() {
     clearAdminAccess();
     localStorage.removeItem("access");
     sessionStorage.removeItem("access");
+    localStorage.removeItem("token");
+    sessionStorage.removeItem("token");
     window.location.href = "/admin/login";
   }
 

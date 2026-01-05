@@ -60,8 +60,8 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/handbook" element={<Handbook />} />
             <Route path="/my-projects" element={<MyProjects />} />
-            <Route path="/courses" element={<Courses />} />
-            <Route path="/courses/watch/:id" element={<CoursesWatch />} />
+            {/* <Route path="/courses" element={<Courses />} /> */}
+            {/* <Route path="/courses/watch/:id" element={<CoursesWatch />} /> */}
             <Route path="/my-products" element={<MyProducts />} />
             <Route path="/post/:slug" element={<PostDetail />} />
 

@@ -259,6 +259,9 @@ export default function Register() {
           <Link className="auth-link" to="/login">
             Giriş yap
           </Link>
+          <a className="auth-link" href="/">
+            Anasayfa
+          </a>
         </div>
       </form>
     </div>

@@ -47,8 +47,8 @@
   height: 110px;
   max-width: 560px;
   max-height: 200px;
-  min-width: 560px;
-  min-height: 55px;
+  /* min-width: 560px; */
+  /* min-height: 55px; */
   border: 1px solid rgba(255, 255, 255, 0.09);
   background: #2a2b2d;
   color: #eaeaea;
@@ -200,5 +200,16 @@
   }
   .socials {
     grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 500px) {
+  .subscribe-btn {
+    max-width: 275px !important;
+  }
+  .subscribe-input {
+    max-width: 275px !important;
+  }
+  textarea {
+    max-width: 275px !important;
   }
 }

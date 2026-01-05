@@ -54,8 +54,11 @@
 
 /* Grid */
 .projects-grid {
+  /* display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(1.2rem, 2.5vw, 2rem); */
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: clamp(1.2rem, 2.5vw, 2rem);
 }
 
@@ -136,4 +139,83 @@
   .projects-section {
     margin: 3rem 8vw 5rem;
   }
+}
+
+/*  */
+/* Kart – taşmaları gizle */
+.project-card {
+  border-radius: 22px;
+  overflow: hidden; /* KRİTİK */
+}
+
+/* Görsel sarmalayıcı */
+.project-media {
+  overflow: hidden; /* ekstra güvenlik */
+}
+
+/* Görselin kendisi */
+.project-media img {
+  display: block;
+  width: 100%;
+  height: clamp(220px, 30vw, 340px);
+  object-fit: cover;
+
+  box-sizing: border-box;
+  border-radius: 18px; /* karttan biraz küçük */
+}
+
+/* Course card */
+.course-card {
+  border-radius: 22px;
+  overflow: hidden;
+}
+
+/* Course image wrapper */
+.course-media {
+  overflow: hidden;
+}
+
+/* Course image */
+.course-media img {
+  width: 100%;
+  height: clamp(220px, 30vw, 340px);
+  object-fit: cover;
+  display: block;
+
+  border-radius: 18px;
+  box-sizing: border-box;
+}
+
+.course-media img,
+.project-media img {
+  transition: transform 0.35s ease;
+}
+
+.course-card:hover img,
+.project-card:hover img {
+  transform: scale(1.03);
+}
+
+/* Courses Grid – DESKTOP: 3 kart */
+.courses-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(1.2rem, 2.5vw, 2rem);
+}
+
+/* Laptop / Tablet */
+@media (max-width: 1100px) {
+  .courses-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Mobil */
+@media (max-width: 640px) {
+  .courses-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.courses-grid {
+  grid-template-columns: repeat(3, 1fr) !important;
 }

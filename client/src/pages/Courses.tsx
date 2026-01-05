@@ -1,51 +1,61 @@
-import { useEffect, useState } from "react";
+// import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import "../css/Courses.css";
-import PostsFeed from "./posts/PostsFeed";
-import { api } from "../lib/api";
+// import PostsFeed from "./posts/PostsFeed";
+// import { api } from "../lib/api";
+import posts from "../data/manuel-post.json";
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://72.62.52.200:1002";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://192.168.1.152:1002";
 
-type Course = {
+type Post = {
   id: number;
+  slug: string;
   title: string;
-  detail?: string | null; // açıklama
-  video_url: string; // içerik (dosya yolu)
+  excerpt: string;
+  cover: string;
   created_at: string;
 };
 
-export default function Courses() {
-  const [authed, setAuthed] = useState<boolean | null>(null);
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    let live = true;
-    (async () => {
-      try {
-        await api("/api/account/user-me", { auth: true } as any);
-        if (!live) return;
-        setAuthed(true);
-        const d = await api<Course[]>("/api/courses", { auth: true } as any);
-        if (live) setCourses(d);
-      } catch {
-        if (live) {
-          setAuthed(false);
-          setCourses([]);
-        }
-      } finally {
-        if (live) setLoading(false);
-      }
-    })();
-    return () => {
-      live = false;
-    };
-  }, []);
+// type Course = {
+//   id: number;
+//   title: string;
+//   detail?: string | null; // açıklama
+//   video_url: string; // içerik (dosya yolu)
+//   created_at: string;
+// };
 
-  const isOdd = courses.length % 2 === 1;
-  const toAbs = (u: string) => (u?.startsWith("http") ? u : `${API_BASE}${u}`);
-  const isHls = (u: string) => /\.m3u8($|\?)/i.test(u);
+export default function Courses() {
+  // const [authed, setAuthed] = useState<boolean | null>(null);
+  // const [courses, setCourses] = useState<Course[]>([]);
+  // const [loading, setLoading] = useState(true);
+  // useEffect(() => {
+  //   let live = true;
+  //   (async () => {
+  //     try {
+  //       await api("/api/account/user-me", { auth: true } as any);
+  //       if (!live) return;
+  //       setAuthed(true);
+  //       const d = await api<Course[]>("/api/courses", { auth: true } as any);
+  //       if (live) setCourses(d);
+  //     } catch {
+  //       if (live) {
+  //         setAuthed(false);
+  //         setCourses([]);
+  //       }
+  //     } finally {
+  //       if (live) setLoading(false);
+  //     }
+  //   })();
+  //   return () => {
+  //     live = false;
+  //   };
+  // }, []);
+
+  // const isOdd = courses.length % 2 === 1;
+  // const toAbs = (u: string) => (u?.startsWith("http") ? u : `${API_BASE}${u}`);
+  // const isHls = (u: string) => /\.m3u8($|\?)/i.test(u);
 
   return (
     <>
@@ -62,78 +72,35 @@ export default function Courses() {
       </section>
 
       <main className="courses-wrap">
-        {loading && <p className="muted">Yükleniyor…</p>}
-        {authed === false && !loading && (
-          <div className="locked">
-            <h2>Giriş yapın</h2>
-            <a className="btn-login" href="/login">
-              Giriş / Kayıt
-            </a>
-          </div>
-        )}
+        <div className="courses-grid">
+          {(posts as Post[]).map((post) => (
+            <article key={post.id} className="course-card">
+              <div className="course-media">
+                <img src={new URL(post.cover, import.meta.url).pathname} />
+              </div>
 
-        {authed && !loading && courses.length > 0 && (
-          <div className={`courses-grid ${isOdd ? "odd" : ""}`}>
-            {courses.map((c, i) => {
-              const src = toAbs(c.video_url || "");
-              return (
-                <article key={c.id} className="course-card">
-                  <header className="course-head">
-                    <div className="course-chip">#{i + 1}</div>
-                    <h2 className="course-title">
-                      <Link to={`/courses/watch/${c.id}`} state={c}>
-                        {c.title}
-                      </Link>
-                    </h2>
-                    <time className="course-time">
-                      {new Date(c.created_at).toLocaleString()}
-                    </time>
-                  </header>
+              <header className="course-head">
+                <h2 className="course-title">
+                  <Link to={`/post/${post.slug}`}>{post.title}</Link>
+                </h2>
+                <time className="course-time">
+                  {new Date(post.created_at).toLocaleDateString()}
+                </time>
+              </header>
 
-                  <div className="course-media">
-                    {isHls(src) ? (
-                      <div className="hls-placeholder">
-                        <Link
-                          className="watch-btn"
-                          to={`/courses/watch/${c.id}`}
-                          state={c}
-                        >
-                          İzle →
-                        </Link>
-                      </div>
-                    ) : (
-                      <video
-                        controls
-                        preload="metadata"
-                        src={src}
-                        className="course-video"
-                        controlsList="nodownload noremoteplayback"
-                        disablePictureInPicture
-                        onContextMenu={(e) => e.preventDefault()}
-                      // referrerPolicy="no-referrer"
-                      />
-                    )}
-                  </div>
+              <p className="course-desc">{post.excerpt}</p>
 
-                  {/* video içeriği = video_url, açıklama = detail */}
-                  {c.detail && <p className="course-desc">{c.detail}</p>}
-
-                  <footer className="course-actions">
-                    <Link
-                      className="watch-link"
-                      to={`/courses/watch/${c.id}`}
-                      state={c}
-                    >
-                      İzle →
-                    </Link>
-                  </footer>
-                </article>
-              );
-            })}
-          </div>
-        )}
+              <footer className="course-actions">
+                <Link className="watch-link" to={`/post/${post.slug}`}>
+                  اقرأ →
+                </Link>
+              </footer>
+            </article>
+          ))}
+        </div>
       </main>
-      <PostsFeed pageKey="courses" showCover showExcerpt />
+
+      {/* <PostsFeed pageKey="courses" showCover showExcerpt /> */}
       <Footer />
     </>
   );
