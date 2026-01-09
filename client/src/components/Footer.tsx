@@ -21,7 +21,7 @@ export default function Footer() {
     }
 
     try {
-      const res = await fetch(`http://192.168.1.152:1002/api/public/email`, {
+      const res = await fetch(`http://72.62.52.200:1002/api/public/email`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, subject, message }),

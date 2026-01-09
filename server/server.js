@@ -32,7 +32,7 @@ const usedJtis = new Set();
 
 const {
   PORT = 1002,
-  CLIENT_ORIGIN = "http://192.168.1.152:1001",
+  CLIENT_ORIGIN = "http://72.62.52.200:1001",
   DB_HOST,
   DB_PORT,
   DB_USER,
@@ -384,7 +384,7 @@ function splitDialAndNumber(full) {
 const app = express();
 
 const FRONTEND_ORIGIN =
-  process.env.FRONTEND_ORIGIN || "http://192.168.1.152:1001";
+  process.env.FRONTEND_ORIGIN || "http://72.62.52.200:1001";
 
 app.use(
   cors({
@@ -424,7 +424,7 @@ function assertId(req, res, next) {
 // CORS (credentials + dev allowlist)
 const allowlist = new Set([
   CLIENT_ORIGIN,
-  "http://192.168.1.152:1001",
+  "http://72.62.52.200:1001",
   "http://127.0.0.1:1001",
 ]);
 
@@ -2185,7 +2185,7 @@ app.get("/api/courses/:id/play", requireAuth, async (req, res) => {
   });
 
   // 5) playback endpoint yolunu döndür (aynı origin:1002)
-  // istemci bunu doğrudan video src olarak kullanacak: http://192.168.1.152:1002/courses/playback/<token>
+  // istemci bunu doğrudan video src olarak kullanacak: http://72.62.52.200:1002/courses/playback/<token>
   return res.json({ playback: `/courses/playback/${token}` });
 });
 
@@ -2437,5 +2437,5 @@ app.use((_req, res) => res.status(404).json({ error: "Not Found" }));
 
 // start
 app.listen(Number(PORT), () => {
-  console.log(`API listening on http://192.168.1.152:${PORT}`);
+  console.log(`API listening on http://72.62.52.200:${PORT}`);
 });
