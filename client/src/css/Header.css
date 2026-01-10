@@ -127,3 +127,12 @@ nav ul li a:hover {
     display: none;
   }
 }
+
+nav button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  padding: 0;
+}

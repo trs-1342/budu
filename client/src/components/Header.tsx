@@ -1,66 +1,65 @@
 import { useEffect, useState } from "react";
 import "../css/Header.css";
 import buduLogo from "../assets/buduLogo.svg";
-import { Link } from "react-router-dom";
 import { getUserAccess, subscribeAuth } from "../lib/userAuth";
 
-// function isAuthed() {
-//   const token = getUserAccess?.();
-//   return !!token;
-// }
-
 function Header() {
-  // const authed = isAuthed();
-  const [authed, setAuthed] = useState(!!getUserAccess());
+  const [authed, setAuthed] = useState(() => !!getUserAccess());
 
   useEffect(() => {
-    return subscribeAuth(() => {
+    const unsub = subscribeAuth(() => {
       setAuthed(!!getUserAccess());
     });
+    return unsub;
   }, []);
 
+  // bilinçli full reload
+  const go = (path) => {
+    window.location.href = path;
+  };
+
   return (
-    <header className="App-header reveal reveal--center">
+    <header className="App-header">
       <div>
         <nav>
           <span id="span-project-button">
-            <Link
-              to="mailto:jolanar444@gmail.com"
+            <a
+              href="mailto:jolanar444@gmail.com"
               id="project-button"
               style={{ textDecoration: "none" }}
             >
               هل لديك مشروع؟
-            </Link>
+            </a>
           </span>
 
           <ul>
             <li>
-              <a href={authed ? "/account" : "/login"}>
+              <button onClick={() => go(authed ? "/account" : "/login")}>
                 {authed ? "حسابي" : "تسجيل الدخول"}
-              </a>
+              </button>
             </li>
 
             <li>
-              <Link to="/my-products">مؤلفاتي</Link>
+              <button onClick={() => go("/my-products")}>مؤلفاتي</button>
             </li>
 
             <li>
-              <Link to="/my-projects">دوراتي</Link>
+              <button onClick={() => go("/my-projects")}>دوراتي</button>
             </li>
 
             <li>
-              <Link to="/handbook">منهجية العمل</Link>
+              <button onClick={() => go("/handbook")}>منهجية العمل</button>
             </li>
 
             <li>
-              <Link to="/">الصفحة الرئيسية</Link>
+              <button onClick={() => go("/")}>الصفحة الرئيسية</button>
             </li>
           </ul>
 
           <span id="span-budu-logo">
-            <Link to="/">
+            <button onClick={() => go("/")}>
               <img src={buduLogo} id="budu-logo" alt="Budu logo" />
-            </Link>
+            </button>
           </span>
         </nav>
       </div>
