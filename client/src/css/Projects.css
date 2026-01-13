@@ -216,6 +216,29 @@
     grid-template-columns: 1fr;
   }
 }
-.courses-grid {
+/* THE PROBLEM !!! */
+/* .courses-grid {
   grid-template-columns: repeat(3, 1fr) !important;
+} */
+
+/* THE SOLUTION */
+/* Courses Grid – Desktop: 3 kart */
+.courses-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(1.2rem, 2.5vw, 2rem);
+}
+
+/* Laptop / Tablet */
+@media (max-width: 1100px) {
+  .courses-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Mobil – alt alta */
+@media (max-width: 640px) {
+  .courses-grid {
+    grid-template-columns: 1fr;
+  }
 }
