@@ -19,6 +19,7 @@ function MyProjects() {
     <>
       <Header />
       <div>
+      {/*<section className="projects-page projects-section">*/}
         <section
           className="projects-section"
           aria-labelledby="projects-heading"
@@ -69,7 +70,7 @@ function MyProjects() {
           </main>
         </section>
       </div>
-      {/* <PostsFeed pageKey="projects" limit={6} showCover showExcerpt /> */}
+      {/*</section>*/}
       <Footer />
     </>
   );
