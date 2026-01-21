@@ -2,11 +2,11 @@
    PROJECTS PAGE – ISOLATED LAYOUT
    =============================== */
 
-.courses-grid {
+/*.courses-grid {
   display: grid !important;
   grid-template-columns: repeat(3, 1fr) !important;
   gap: 2rem !important;
-}
+}*/
 
 /* Sayfayı global container & grid sisteminden izole et */
 .projects-page {

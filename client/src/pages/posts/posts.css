@@ -10,6 +10,12 @@
   font-family: "JetBrains Mono", "Fira Code", monospace !important;
 }
 
+/* ai */
+
+.posts-feed .main-container {
+  display: flex;
+}
+
 .posts {
   display: grid;
   gap: 12px;

@@ -19,11 +19,11 @@ function MyProjects() {
     <>
       <Header />
       <div>
-      {/*<section className="projects-page projects-section">*/}
-        <section
+        {/*<section
           className="projects-section"
           aria-labelledby="projects-heading"
-        >
+        >*/}
+      <section className="projects-page">
           <header className="projects-header">
             <h1 id="projects-heading" className="projects-title">
               دوراتي
@@ -70,7 +70,6 @@ function MyProjects() {
           </main>
         </section>
       </div>
-      {/*</section>*/}
       <Footer />
     </>
   );
