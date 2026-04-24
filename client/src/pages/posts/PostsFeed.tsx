@@ -22,7 +22,7 @@ type Props = {
   showCover?: boolean;
 };
 
-const API = import.meta.env.VITE_API_BASE || "http://72.62.52.200:1002";
+const API = import.meta.env.VITE_API_BASE || "http://localhost:3001";
 
 export default function PostsFeed({
   pageKey,

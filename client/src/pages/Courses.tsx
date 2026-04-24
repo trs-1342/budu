@@ -7,7 +7,7 @@ import "../css/Courses.css";
 // import { api } from "../lib/api";
 import posts from "../data/manuel-post.json";
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://72.62.52.200:1002";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3001";
 
 type Post = {
   id: number;

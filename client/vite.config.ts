@@ -6,18 +6,18 @@ export default defineConfig({
 
   server: {
     host: "0.0.0.0",
-    port: 1001,
-
+    port: 3000,
+    host:true,
     allowedHosts: [
       "bushradukhan.com",
       "www.bushradukhan.com",
-      "72.62.52.200",
+      "localhost",
       "localhost"
     ],
 
     proxy: {
       "/api": {
-        target: "http://127.0.0.1:1002",
+        target: "http://127.0.0.1:3001",
         changeOrigin: true,
       },
     },
